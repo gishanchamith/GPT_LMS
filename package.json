@@ -1,0 +1,24 @@
+{
+  "name": "GPT_LMS",
+  "private": false,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @lp/api\" \"npm run dev -w @lp/web\"",
+    "dev:api": "npm run dev -w @lp/api",
+    "dev:web": "npm run dev -w @lp/web",
+    "build": "npm run build -w @lp/web",
+    "test": "npm test -w @lp/api",
+    "seed": "npm run seed -w @lp/api",
+    "create-superadmin": "npm run create-superadmin -w @lp/api"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "prettier": "^3.9.7"
+  }
+}
