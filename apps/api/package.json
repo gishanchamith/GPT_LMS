@@ -1,0 +1,20 @@
+{
+  "name": "@lp/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file=.env src/server.js",
+    "start": "node --env-file=.env src/server.js",
+    "test": "vitest run",
+    "seed": "node --env-file=.env src/scripts/seed.js",
+    "create-superadmin": "node --env-file=.env src/scripts/createSuperAdmin.js"
+  },
+  "dependencies": {
+    "@lp/shared": "*"
+  },
+  "devDependencies": {
+    "supertest": "^7.2.2",
+    "vitest": "^5.0.1"
+  }
+}
