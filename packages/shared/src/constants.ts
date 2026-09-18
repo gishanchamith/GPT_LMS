@@ -20,7 +20,9 @@ export type EnrollmentStatus = ValueOf<typeof ENROLLMENT_STATUS>;
 export const COURSE_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
 export type CourseLevel = (typeof COURSE_LEVELS)[number];
 
-export const COURSE_CATEGORIES = [
+// Categories live in the database and are managed by admins. These are the ones a new
+// database starts with.
+export const DEFAULT_COURSE_CATEGORIES = [
   'Software Engineering',
   'Data Science',
   'Design',
@@ -28,7 +30,7 @@ export const COURSE_CATEGORIES = [
   'Cloud & DevOps',
   'Cybersecurity',
 ] as const;
-export type CourseCategory = (typeof COURSE_CATEGORIES)[number];
+export type CourseCategory = string;
 
 export const AUDIT_ACTIONS = {
   USER_SUSPENDED: 'USER_SUSPENDED',
@@ -40,6 +42,8 @@ export const AUDIT_ACTIONS = {
   ADMIN_CREATED: 'ADMIN_CREATED',
   ADMIN_REMOVED: 'ADMIN_REMOVED',
   ROLE_CHANGED: 'ROLE_CHANGED',
+  CATEGORY_CREATED: 'CATEGORY_CREATED',
+  CATEGORY_UPDATED: 'CATEGORY_UPDATED',
 } as const;
 export type AuditAction = ValueOf<typeof AUDIT_ACTIONS>;
 

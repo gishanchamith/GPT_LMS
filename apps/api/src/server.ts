@@ -2,10 +2,12 @@ import mongoose from 'mongoose';
 import { assertEnv } from './config/env.js';
 import { connectDB } from './config/db.js';
 import { createApp } from './app.js';
+import { ensureDefaultCategories } from './services/category.service.js';
 import { aiModel, isAiConfigured } from './services/ai/openai.client.js';
 
 assertEnv();
 await connectDB(process.env.MONGODB_URI);
+await ensureDefaultCategories();
 
 const port = Number(process.env.PORT) || 5000;
 const server = createApp().listen(port, () => {

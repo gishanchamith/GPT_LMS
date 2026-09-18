@@ -18,6 +18,7 @@ import ApiError from '../utils/ApiError.js';
 import { escapeRegex, paginationMeta } from '../utils/respond.js';
 import type { AuditContext } from '../utils/request.js';
 import { logAction } from './audit.service.js';
+import { assertCategoryUsable } from './category.service.js';
 
 const P = PERMISSIONS;
 const INSTRUCTOR_FIELDS = 'name username';
@@ -113,8 +114,12 @@ export async function getCourseDetail(course: CourseDocument, user: UserDocument
   return { ...detail, isEnrolled };
 }
 
-export function createCourse(user: UserDocument, data: CreateCourseInput): Promise<CourseDocument> {
-  return Course.create({ ...data, instructor: user._id });
+export async function createCourse(
+  user: UserDocument,
+  data: CreateCourseInput,
+): Promise<CourseDocument> {
+  const category = await assertCategoryUsable(data.category);
+  return Course.create({ ...data, category, instructor: user._id });
 }
 
 export async function updateCourse(
@@ -123,6 +128,10 @@ export async function updateCourse(
   data: UpdateCourseInput,
 ): Promise<CourseDocument> {
   assertCanModifyCourse(ctx.user, course, 'update');
+  if (data.category !== undefined) {
+    // A course may keep a category that has since been hidden, but can't move into one.
+    data = { ...data, category: await assertCategoryUsable(data.category, course.category) };
+  }
   course.set(data);
   await course.save();
   // Owners editing their own work is routine; an admin editing someone else's is audited.

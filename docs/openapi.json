@@ -199,6 +199,25 @@
           }
         }
       },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Hidden categories stay on existing courses"
+          },
+          "courseCount": {
+            "type": "integer",
+            "description": "Admin list only"
+          }
+        }
+      },
       "Lesson": {
         "type": "object",
         "properties": {
@@ -224,14 +243,7 @@
           },
           "category": {
             "type": "string",
-            "enum": [
-              "Software Engineering",
-              "Data Science",
-              "Design",
-              "Business",
-              "Cloud & DevOps",
-              "Cybersecurity"
-            ]
+            "description": "A category name from GET /categories"
           },
           "level": {
             "type": "string",
@@ -293,14 +305,7 @@
           },
           "category": {
             "type": "string",
-            "enum": [
-              "Software Engineering",
-              "Data Science",
-              "Design",
-              "Business",
-              "Cloud & DevOps",
-              "Cybersecurity"
-            ]
+            "description": "A category name from GET /categories"
           },
           "level": {
             "type": "string",
@@ -633,14 +638,7 @@
                     "maxItems": 3,
                     "items": {
                       "type": "string",
-                      "enum": [
-                        "Software Engineering",
-                        "Data Science",
-                        "Design",
-                        "Business",
-                        "Cloud & DevOps",
-                        "Cybersecurity"
-                      ]
+                      "description": "A category name from GET /categories"
                     }
                   },
                   "level": {
@@ -769,16 +767,9 @@
             "name": "category",
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "Software Engineering",
-                "Data Science",
-                "Design",
-                "Business",
-                "Cloud & DevOps",
-                "Cybersecurity"
-              ]
-            }
+              "type": "string"
+            },
+            "description": "A category name from GET /categories"
           },
           {
             "name": "level",
@@ -890,6 +881,39 @@
         }
       }
     },
+    "/categories": {
+      "get": {
+        "tags": [
+          "Courses"
+        ],
+        "summary": "Visible course categories (for forms, filters and onboarding)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Category"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/courses/suggested": {
       "get": {
         "tags": [
@@ -926,14 +950,7 @@
                               "maxItems": 3,
                               "items": {
                                 "type": "string",
-                                "enum": [
-                                  "Software Engineering",
-                                  "Data Science",
-                                  "Design",
-                                  "Business",
-                                  "Cloud & DevOps",
-                                  "Cybersecurity"
-                                ]
+                                "description": "A category name from GET /categories"
                               }
                             },
                             "level": {
@@ -1812,16 +1829,9 @@
             "name": "category",
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "Software Engineering",
-                "Data Science",
-                "Design",
-                "Business",
-                "Cloud & DevOps",
-                "Cybersecurity"
-              ]
-            }
+              "type": "string"
+            },
+            "description": "A category name from GET /categories"
           },
           {
             "name": "level",
@@ -2006,6 +2016,174 @@
           },
           "404": {
             "$ref": "#/components/responses/E404"
+          }
+        }
+      }
+    },
+    "/admin/categories": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "All categories, hidden ones included, with course counts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Category"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "403": {
+            "$ref": "#/components/responses/E403"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Add a category",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Mobile Development"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/E400"
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "403": {
+            "$ref": "#/components/responses/E403"
+          },
+          "409": {
+            "$ref": "#/components/responses/E409"
+          }
+        }
+      }
+    },
+    "/admin/categories/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Rename (courses and student interests follow) or hide/show a category",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/E400"
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "403": {
+            "$ref": "#/components/responses/E403"
+          },
+          "404": {
+            "$ref": "#/components/responses/E404"
+          },
+          "409": {
+            "$ref": "#/components/responses/E409"
           }
         }
       }
@@ -2269,7 +2447,9 @@
                 "COURSE_DELETED",
                 "ADMIN_CREATED",
                 "ADMIN_REMOVED",
-                "ROLE_CHANGED"
+                "ROLE_CHANGED",
+                "CATEGORY_CREATED",
+                "CATEGORY_UPDATED"
               ]
             }
           },

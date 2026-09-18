@@ -16,6 +16,7 @@ const LINKS = [
     permission: PERMISSIONS.INSTRUCTOR_APPROVE,
   },
   { href: '/admin/courses', label: 'Courses', permission: PERMISSIONS.COURSE_READ_ANY },
+  { href: '/admin/categories', label: 'Categories', permission: PERMISSIONS.CATEGORY_MANAGE },
   { href: '/admin/admins', label: 'Admins', permission: PERMISSIONS.ADMIN_MANAGE },
   { href: '/admin/audit-logs', label: 'Audit log', permission: PERMISSIONS.AUDIT_READ },
 ];

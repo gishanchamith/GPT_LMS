@@ -7,7 +7,14 @@ erDiagram
     COURSE ||--o{ ENROLLMENT : "has"
     USER ||--o{ AUDITLOG : "performs"
     USER ||--o{ USER : "createdBy (admins)"
+    CATEGORY ||--o{ COURSE : "category (by name)"
 
+    CATEGORY {
+        string name "shown everywhere"
+        string key UK "lowercased name"
+        boolean active "false = hidden"
+        objectId createdBy FK
+    }
     USER {
         string name
         string username UK "lowercase"
@@ -53,6 +60,7 @@ erDiagram
 | users       | `username` unique, `email` unique                         | Login lookup; no duplicate accounts (values are lowercased first)                                               |
 | users       | `{ role: 1 }` **unique, partial** on `role: 'superadmin'` | MongoDB itself guarantees there is exactly one super admin, even if application code has a bug                  |
 | users       | `role`, `status`                                          | Admin user filters, pending-instructor queue                                                                    |
+| categories  | `key` unique, `active`                                    | Case-insensitive unique names; the public list only shows active ones                                           |
 | courses     | `instructor`                                              | "My courses"                                                                                                    |
 | courses     | `category`, `status`                                      | Catalog filters; public list only shows `published`                                                             |
 | courses     | `createdAt` sort + `_id` tiebreak                         | Stable newest-first pages. Search is a case-insensitive substring match, so it needs no text index at this size |

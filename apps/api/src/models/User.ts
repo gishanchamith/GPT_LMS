@@ -1,6 +1,5 @@
 import { Schema, model, type HydratedDocument, type Types } from 'mongoose';
 import {
-  COURSE_CATEGORIES,
   COURSE_LEVELS,
   LEARNING_GOALS,
   ROLES,
@@ -29,7 +28,7 @@ export type UserDocument = HydratedDocument<IUser>;
 
 const preferencesSchema = new Schema(
   {
-    categories: { type: [{ type: String, enum: [...COURSE_CATEGORIES] }], default: undefined },
+    categories: { type: [String], default: undefined },
     level: { type: String, enum: [...COURSE_LEVELS] },
     goal: { type: String, enum: Object.values(LEARNING_GOALS) },
     updatedAt: { type: Date, default: Date.now },

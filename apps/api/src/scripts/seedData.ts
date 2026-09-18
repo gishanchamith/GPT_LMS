@@ -256,3 +256,22 @@ export const ENROLLMENTS: [studentIndex: number, courseTitle: string, completed:
   [3, 'Node.js and Express: Building REST APIs', false],
   [3, 'AWS Cloud Practitioner', false],
 ];
+
+// `npm run seed -- --small`: just enough to click through every role.
+// 7 users (the first two students), 6 courses (one of them a draft) and 3 enrollments.
+export const SMALL = {
+  studentCount: 2,
+  courseTitles: [
+    'Programming Fundamentals with JavaScript',
+    'Node.js and Express: Building REST APIs',
+    'Python for Data Analysis',
+    'UI Design Principles',
+    'AWS Cloud Practitioner',
+    'Advanced TypeScript Patterns',
+  ],
+  enrollments: [
+    [0, 'Programming Fundamentals with JavaScript', true],
+    [0, 'Node.js and Express: Building REST APIs', false],
+    [1, 'Python for Data Analysis', false],
+  ] as [studentIndex: number, courseTitle: string, completed: boolean][],
+};

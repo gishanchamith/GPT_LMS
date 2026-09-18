@@ -2,6 +2,7 @@ import { COURSE_LEVELS, COURSE_STATUS, type PreferencesInput } from '@lp/shared'
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import type { UserDocument } from '../models/User.js';
+import { assertCategoriesUsable } from './category.service.js';
 
 const SUGGESTION_LIMIT = 6;
 
@@ -9,7 +10,8 @@ export async function savePreferences(
   user: UserDocument,
   input: PreferencesInput,
 ): Promise<UserDocument> {
-  user.preferences = { ...input, updatedAt: new Date() };
+  const categories = await assertCategoriesUsable(input.categories);
+  user.preferences = { ...input, categories, updatedAt: new Date() };
   await user.save();
   return user;
 }

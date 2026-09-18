@@ -77,6 +77,15 @@ substitution.
 - **Changing an instructor's role is refused while they still own courses**, since nobody else
   could then manage those courses.
 
+## Categories are data, not code
+
+Admins add, rename and hide categories from the dashboard, so the catalog can grow without a
+deploy. A new database starts with six defaults. Courses store the category **name** (not an id),
+which keeps course queries and filters simple; the cost is that a rename must update every course
+and every student's onboarding answers, which `updateCategory` does in the same request.
+Categories are never deleted, only hidden, so no course can end up with a category that doesn't
+exist. Names are unique case-insensitively (`key` = lowercased name).
+
 ## Data
 
 See [DATABASE.md](DATABASE.md): Enrollment as a separate collection, compound unique index,
@@ -93,7 +102,7 @@ because it adds little at three packages.
 
 ## Testing strategy
 
-95 Vitest + Supertest API tests against an in-memory MongoDB **replica set** (needed for
+105 Vitest + Supertest API tests against an in-memory MongoDB **replica set** (needed for
 transactions), one isolated database per test file, plus 10 web tests for the route guard and the
 API client. The tests focus on the rules that would be embarrassing to get wrong: the
 registration role whitelist, cross-instructor edits, admin vs admin, suspension revocation,

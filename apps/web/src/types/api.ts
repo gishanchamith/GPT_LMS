@@ -119,3 +119,11 @@ export interface AuditLogEntry {
   ip?: string;
   createdAt: string;
 }
+
+export interface Category {
+  _id: string;
+  name: string;
+  active: boolean;
+  /** Admin list only. */
+  courseCount?: number;
+}

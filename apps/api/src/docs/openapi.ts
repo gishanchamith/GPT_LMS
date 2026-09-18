@@ -1,7 +1,6 @@
 import {
   ASSIGNABLE_ROLES,
   AUDIT_ACTIONS,
-  COURSE_CATEGORIES,
   COURSE_LEVELS,
   LEARNING_GOALS,
   ROLES,
@@ -41,7 +40,7 @@ const pageParams = [
 ];
 const courseFilterParams = [
   query('search', { type: 'string' }, 'Case-insensitive match on title, description or category'),
-  query('category', { type: 'string', enum: COURSE_CATEGORIES }),
+  query('category', { type: 'string' }, 'A category name from GET /categories'),
   query('level', { type: 'string', enum: COURSE_LEVELS }),
   ...pageParams,
 ];
@@ -54,7 +53,7 @@ const PREFERENCES: Schema = {
       type: 'array',
       minItems: 1,
       maxItems: 3,
-      items: { type: 'string', enum: COURSE_CATEGORIES },
+      items: { type: 'string', description: 'A category name from GET /categories' },
     },
     level: { type: 'string', enum: COURSE_LEVELS },
     goal: { type: 'string', enum: Object.values(LEARNING_GOALS) },
@@ -108,6 +107,15 @@ const components = {
         createdAt: { type: 'string', format: 'date-time' },
       },
     },
+    Category: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        name: { type: 'string' },
+        active: { type: 'boolean', description: 'Hidden categories stay on existing courses' },
+        courseCount: { type: 'integer', description: 'Admin list only' },
+      },
+    },
     Lesson: {
       type: 'object',
       properties: { title: { type: 'string' }, body: { type: 'string' } },
@@ -118,7 +126,7 @@ const components = {
         _id: { type: 'string' },
         title: { type: 'string' },
         description: { type: 'string' },
-        category: { type: 'string', enum: COURSE_CATEGORIES },
+        category: { type: 'string', description: 'A category name from GET /categories' },
         level: { type: 'string', enum: COURSE_LEVELS },
         content: arrayOf(ref('Lesson')),
         instructor: {
@@ -136,7 +144,7 @@ const components = {
       properties: {
         title: { type: 'string', example: 'Intro to Node.js' },
         description: { type: 'string', example: 'Build servers with Node.js and Express.' },
-        category: { type: 'string', enum: COURSE_CATEGORIES },
+        category: { type: 'string', description: 'A category name from GET /categories' },
         level: { type: 'string', enum: COURSE_LEVELS },
         content: arrayOf(ref('Lesson')),
         status: { type: 'string', enum: ['draft', 'published', 'archived'] },
@@ -260,6 +268,14 @@ const courses = {
       summary: 'Create a course (active instructors)',
       requestBody: body(ref('CourseInput')),
       responses: { 201: success(ref('Course')), ...errors(400, 401, 403) },
+    },
+  },
+  '/categories': {
+    get: {
+      tags: ['Courses'],
+      summary: 'Visible course categories (for forms, filters and onboarding)',
+      security: [],
+      responses: { 200: success(arrayOf(ref('Category'))) },
     },
   },
   '/courses/suggested': {
@@ -488,6 +504,35 @@ const admin = {
       tags: ['Admin'],
       summary: 'Delete any course and its enrollments',
       responses: { 200: success({}), ...errors(401, 403, 404) },
+    },
+  },
+  '/admin/categories': {
+    get: {
+      tags: ['Admin'],
+      summary: 'All categories, hidden ones included, with course counts',
+      responses: { 200: success(arrayOf(ref('Category'))), ...errors(401, 403) },
+    },
+    post: {
+      tags: ['Admin'],
+      summary: 'Add a category',
+      requestBody: body({
+        type: 'object',
+        required: ['name'],
+        properties: { name: { type: 'string', example: 'Mobile Development' } },
+      }),
+      responses: { 201: success(ref('Category')), ...errors(400, 401, 403, 409) },
+    },
+  },
+  '/admin/categories/{id}': {
+    parameters: [idParam],
+    patch: {
+      tags: ['Admin'],
+      summary: 'Rename (courses and student interests follow) or hide/show a category',
+      requestBody: body({
+        type: 'object',
+        properties: { name: { type: 'string' }, active: { type: 'boolean' } },
+      }),
+      responses: { 200: success(ref('Category')), ...errors(400, 401, 403, 404, 409) },
     },
   },
 };

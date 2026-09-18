@@ -3,15 +3,14 @@
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  COURSE_CATEGORIES,
   COURSE_LEVELS,
   LEARNING_GOAL_LABELS,
   preferencesSchema,
-  type CourseCategory,
   type CourseLevel,
   type LearningGoal,
 } from '@lp/shared';
 import { useAuth } from '@/context/AuthContext';
+import { useCategories } from '@/hooks/useCategories';
 import { api, errorMessage } from '@/lib/api';
 import { capitalize } from '@/lib/format';
 import type { Suggestions, User } from '@/types/api';
@@ -57,14 +56,15 @@ export default function OnboardingPage() {
   const saved = user?.preferences;
 
   const [step, setStep] = useState(0);
-  const [categories, setCategories] = useState<CourseCategory[]>(saved?.categories ?? []);
+  const [categories, setCategories] = useState<string[]>(saved?.categories ?? []);
+  const categoryOptions = useCategories();
   const [level, setLevel] = useState<CourseLevel | null>(saved?.level ?? null);
   const [goal, setGoal] = useState<LearningGoal | null>(saved?.goal ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
 
-  const toggleCategory = (c: CourseCategory) =>
+  const toggleCategory = (c: string) =>
     setCategories((current) =>
       current.includes(c)
         ? current.filter((x) => x !== c)
@@ -104,7 +104,7 @@ export default function OnboardingPage() {
       ready: categories.length > 0,
       body: (
         <div className="grid gap-3 sm:grid-cols-2">
-          {COURSE_CATEGORIES.map((c) => (
+          {categoryOptions.map((c) => (
             <Choice key={c} selected={categories.includes(c)} onClick={() => toggleCategory(c)}>
               <span className="font-medium text-slate-900">{c}</span>
             </Choice>

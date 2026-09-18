@@ -1,6 +1,5 @@
 import { Schema, model, type HydratedDocument, type Types } from 'mongoose';
 import {
-  COURSE_CATEGORIES,
   COURSE_LEVELS,
   COURSE_STATUS,
   type CourseCategory,
@@ -36,7 +35,8 @@ const courseSchema = new Schema<ICourse>(
   {
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
-    category: { type: String, enum: [...COURSE_CATEGORIES], required: true, index: true },
+    // Name of a document in the categories collection (see category.service.ts).
+    category: { type: String, required: true, index: true },
     level: { type: String, enum: [...COURSE_LEVELS], default: 'beginner' },
     content: { type: [lessonSchema], default: [] },
     instructor: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

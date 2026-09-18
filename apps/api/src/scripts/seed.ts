@@ -7,9 +7,11 @@ import User from '../models/User.js';
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import AuditLog from '../models/AuditLog.js';
+import Category from '../models/Category.js';
+import { ensureDefaultCategories } from '../services/category.service.js';
 import { hashPassword } from '../services/auth.service.js';
 import { isLocalDatabase } from '../utils/database.js';
-import { COURSES, DEMO_PASSWORD, ENROLLMENTS, USERS } from './seedData.js';
+import { COURSES, DEMO_PASSWORD, ENROLLMENTS, SMALL, USERS } from './seedData.js';
 
 // Seed data refers to rows by index or title; fail loudly if one doesn't exist.
 function pick<K, V>(from: V[] | Map<K, V>, key: K & (number | string)): V {
@@ -17,6 +19,12 @@ function pick<K, V>(from: V[] | Map<K, V>, key: K & (number | string)): V {
   if (!value) throw new Error(`Seed data references a missing entry: ${String(key)}`);
   return value;
 }
+
+// The full demo set, or with --small a handful of rows (see SMALL in seedData.ts).
+const small = process.argv.includes('--small');
+const studentsData = small ? USERS.students.slice(0, SMALL.studentCount) : USERS.students;
+const coursesData = small ? COURSES.filter((c) => SMALL.courseTitles.includes(c.title)) : COURSES;
+const enrollmentsData = small ? SMALL.enrollments : ENROLLMENTS;
 
 async function seed() {
   const password = process.env.SEED_PASSWORD || DEMO_PASSWORD;
@@ -28,8 +36,16 @@ async function seed() {
     Course.deleteMany({}),
     Enrollment.deleteMany({}),
     AuditLog.deleteMany({}),
+    Category.deleteMany({}),
   ]);
-  await Promise.all([User.init(), Course.init(), Enrollment.init(), AuditLog.init()]);
+  await Promise.all([
+    User.init(),
+    Course.init(),
+    Enrollment.init(),
+    AuditLog.init(),
+    Category.init(),
+  ]);
+  await ensureDefaultCategories();
 
   const superadmin = await User.create({
     name: process.env.SUPERADMIN_NAME || 'Super Admin',
@@ -56,14 +72,14 @@ async function seed() {
   );
 
   const students = await User.insertMany(
-    USERS.students.map((u) => ({ ...u, passwordHash, role: ROLES.STUDENT })),
+    studentsData.map((u) => ({ ...u, passwordHash, role: ROLES.STUDENT })),
   );
 
   const enrollCounts: Record<string, number> = {};
-  for (const [, title] of ENROLLMENTS) enrollCounts[title] = (enrollCounts[title] ?? 0) + 1;
+  for (const [, title] of enrollmentsData) enrollCounts[title] = (enrollCounts[title] ?? 0) + 1;
 
   const courses = await Course.insertMany(
-    COURSES.map(({ by, ...course }) => ({
+    coursesData.map(({ by, ...course }) => ({
       ...course,
       instructor: pick(instructors, by)._id,
       enrollmentCount: enrollCounts[course.title] ?? 0,
@@ -73,11 +89,11 @@ async function seed() {
 
   const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
   await Enrollment.insertMany(
-    ENROLLMENTS.map(([studentIdx, title, completed], i) => ({
+    enrollmentsData.map(([studentIdx, title, completed], i) => ({
       student: pick(students, studentIdx)._id,
       course: pick(courseByTitle, title)._id,
       status: completed ? ENROLLMENT_STATUS.COMPLETED : ENROLLMENT_STATUS.ACTIVE,
-      enrolledAt: daysAgo(ENROLLMENTS.length - i + 2),
+      enrolledAt: daysAgo(enrollmentsData.length - i + 2),
       completedAt: completed ? daysAgo(1) : undefined,
     })),
   );
@@ -97,7 +113,7 @@ async function seed() {
     })),
     ...students.map((u) => ({ role: 'student', username: u.username, password })),
   ]);
-  console.log(`${courses.length} courses, ${ENROLLMENTS.length} enrollments`);
+  console.log(`${courses.length} courses, ${enrollmentsData.length} enrollments`);
 }
 
 // Seeding deletes every user, course and enrollment first, so it only runs unprompted

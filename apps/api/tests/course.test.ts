@@ -49,11 +49,20 @@ describe('POST /api/courses', () => {
     const res = await api()
       .post('/api/courses')
       .set(bearer(instructorA))
-      .send({ title: 'x', category: 'Cooking' });
+      .send({ title: 'x', category: '' });
     expect(res.status).toBe(400);
     expect(Object.keys(res.body.errors)).toEqual(
       expect.arrayContaining(['title', 'description', 'category']),
     );
+  });
+
+  it('returns 400 for a category that does not exist', async () => {
+    const res = await api()
+      .post('/api/courses')
+      .set(bearer(instructorA))
+      .send({ ...validCourse, category: 'Cooking' });
+    expect(res.status).toBe(400);
+    expect(res.body.errors.category).toBeDefined();
   });
 });
 

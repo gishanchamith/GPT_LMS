@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { COURSE_CATEGORIES, COURSE_LEVELS, COURSE_STATUS } from '../constants.ts';
+import { COURSE_LEVELS, COURSE_STATUS } from '../constants.ts';
 import { blankToUndefined, objectIdSchema, paginationSchema } from './common.ts';
 
 export const lessonSchema = z.object({
@@ -13,7 +13,8 @@ export type Lesson = z.infer<typeof lessonSchema>;
 const courseFields = {
   title: z.string().trim().min(3, 'Title must be at least 3 characters').max(120),
   description: z.string().trim().min(10, 'Description must be at least 10 characters').max(2000),
-  category: z.enum(COURSE_CATEGORIES, 'Pick a category'),
+  // Checked against the categories collection by the API.
+  category: z.string().trim().min(1, 'Pick a category').max(40),
   level: z.enum(COURSE_LEVELS),
   content: z.array(lessonSchema).max(50, 'At most 50 lessons'),
 };
@@ -34,7 +35,7 @@ export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
 
 export const courseQuerySchema = paginationSchema.extend({
   search: blankToUndefined(z.string().trim().max(100).optional()),
-  category: blankToUndefined(z.enum(COURSE_CATEGORIES).optional()),
+  category: blankToUndefined(z.string().trim().max(40).optional()),
   level: blankToUndefined(z.enum(COURSE_LEVELS).optional()),
 });
 export type CourseQuery = z.infer<typeof courseQuerySchema>;

@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { COURSE_CATEGORIES, COURSE_LEVELS } from '@lp/shared';
+import { COURSE_LEVELS } from '@lp/shared';
+import { useCategories } from '@/hooks/useCategories';
 import { useApiData } from '@/hooks/useApiData';
 import { capitalize } from '@/lib/format';
 import type { CourseSummary } from '@/types/api';
@@ -27,6 +28,7 @@ function CourseBrowser() {
     page: Number(params.get('page')) || 1,
   };
   const [searchText, setSearchText] = useState(filters.search);
+  const categories = useCategories(filters.category || undefined);
 
   // Filters live in the URL, so they survive reloads and the back button.
   const update = (changes: FilterChanges) => {
@@ -69,7 +71,7 @@ function CourseBrowser() {
           aria-label="Category"
         >
           <option value="">All categories</option>
-          {COURSE_CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <option key={c}>{c}</option>
           ))}
         </Select>

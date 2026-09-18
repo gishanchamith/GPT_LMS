@@ -16,13 +16,13 @@ who enrolled. Admins moderate the platform, and a single super admin manages the
 Seeded by `npm run seed`. Every password is `Password123!`. The login page also has one-click
 buttons for these accounts.
 
-| Role                 | Username     | What to try                                            |
-| -------------------- | ------------ | ------------------------------------------------------ |
-| Student              | `student`    | Browse → enroll → My courses → AI advisor              |
-| Instructor           | `instructor` | Create a course, view enrolled students                |
-| Instructor (pending) | `pending`    | Signs in, but can't publish until approved             |
-| Admin                | `admin`      | Approve `pending`, suspend a student, moderate courses |
-| Super admin          | `superadmin` | Create/remove admins, change roles, audit log          |
+| Role                 | Username                                                                                                                                                                                                                                                                   | What to try                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Student              | `student`                                                                                                                                                                                                                                                                  | Browse → enroll → My courses → AI advisor     |
+| Instructor           | `instructor`                                                                                                                                                                                                                                                               | Create a course, view enrolled students       |
+| Instructor (pending) | `pending`                                                                                                                                                                                                                                                                  | Signs in, but can't publish until approved    |
+| Admin                | `GET /admin/stats` · `GET /admin/users` · `PATCH /admin/users/:id/status` · `PATCH /admin/instructors/:id/approve` · `GET /admin/courses` · `PATCH /admin/courses/:id/status` · `DELETE /admin/courses/:id` · `GET/POST /admin/categories` · `PATCH /admin/categories/:id` |
+| Super admin          | `superadmin`                                                                                                                                                                                                                                                               | Create/remove admins, change roles, audit log |
 
 ## Features
 
@@ -44,7 +44,9 @@ New instructors start **pending** until an admin approves them.
 
 **Admins**: stats dashboard (MongoDB aggregations); user list with filters; suspend and reactivate
 users below their role, **effective on the user's next request**; approve instructors; publish,
-unpublish, archive or delete any course.
+unpublish, archive or delete any course; manage **course categories** (add, rename, hide) from
+the Categories page. Renaming updates every course and student interest that uses the category;
+hiding stops new use but keeps existing courses.
 
 **Super admin**: everything an admin can do, plus create and remove admins, change roles, and view
 the audit log of every privileged action.
@@ -60,7 +62,7 @@ the audit log of every privileged action.
 | Auth       | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `PUT /auth/me/password` · `PUT /auth/me/preferences` |
 | Validation | **zod 4** in a shared package                                                                                                            | The same schema validates the React form and the API request                                                      |
 | AI         | **OpenAI** chat completions (JSON mode)                                                                                                  | Grounded on the real catalog; every id re-validated server-side                                                   |
-| Quality    | Vitest + Supertest + mongodb-memory-server, ESLint 10 + typescript-eslint, Prettier, GitHub Actions                                      | 95 API tests against a real (in-memory) MongoDB replica set, 10 web tests, CI on every push                       |
+| Quality    | Vitest + Supertest + mongodb-memory-server, ESLint 10 + typescript-eslint, Prettier, GitHub Actions                                      | 105 API tests against a real (in-memory) MongoDB replica set, 10 web tests, CI on every push                      |
 | Docs       | OpenAPI 3 + swagger-ui                                                                                                                   | Live, try-it-out documentation at `/api/docs`                                                                     |
 | Hosting    | Vercel (web) · EC2 + Nginx + PM2 + certbot (API) · Atlas                                                                                 | HTTPS end to end; Atlas allow-lists only the EC2 IP                                                               |
 
@@ -122,6 +124,7 @@ Full schemas and the rationale for each index: [docs/DATABASE.md](docs/DATABASE.
 | Suspend / reactivate users                         |   ❌    |         ❌         | ✅ lower roles only |     ✅      |
 | Create / remove admins, change roles               |   ❌    |         ❌         |         ❌          |     ✅      |
 | Platform stats                                     |   ❌    |         ❌         |         ✅          |     ✅      |
+| Add, rename, hide course categories                |   ❌    |         ❌         |         ✅          |     ✅      |
 | Audit log                                          |   ❌    |         ❌         |         ❌          |     ✅      |
 
 Two independent rules are always enforced server-side: **permission** (does the role have
@@ -131,17 +134,17 @@ re-checks everything, re-reading the user from the database on every request.
 
 ## API
 
-31 endpoints, all documented and runnable in Swagger at **`/api/docs/`**. For Postman, import
+35 endpoints, all documented and runnable in Swagger at **`/api/docs/`**. For Postman, import
 [`docs/openapi.json`](docs/openapi.json).
 
-| Area        | Endpoints                                                                                                                                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Auth        | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `PUT /auth/me/password` · `PUT /auth/me/preferences`                                                                           |
-| Courses     | `GET /courses?search&category&level&page&limit` · `GET /courses/:id` · `POST /courses` · `PUT /courses/:id` · `DELETE /courses/:id` · `GET /courses/mine` · `GET /courses/suggested` · `GET /courses/:id/students` |
-| Enrollments | `POST /enrollments` · `GET /enrollments/me` · `PATCH /enrollments/:id/complete` · `DELETE /enrollments/:id`                                                                                                        |
-| AI          | `POST /recommendations` (guests and students)                                                                                                                                                                      |
-| Admin       | `GET /admin/stats` · `GET /admin/users` · `PATCH /admin/users/:id/status` · `PATCH /admin/instructors/:id/approve` · `GET /admin/courses` · `PATCH /admin/courses/:id/status` · `DELETE /admin/courses/:id`        |
-| Super admin | `POST/GET /superadmin/admins` · `DELETE /superadmin/admins/:id` · `PATCH /superadmin/users/:id/role` · `GET /superadmin/audit-logs`                                                                                |
+| Area        | Endpoints                                                                                                                                                                                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth        | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `PUT /auth/me/password` · `PUT /auth/me/preferences`                                                                                                                                   |
+| Courses     | `GET /courses?search&category&level&page&limit` · `GET /courses/:id` · `POST /courses` · `PUT /courses/:id` · `DELETE /courses/:id` · `GET /courses/mine` · `GET /courses/suggested` · `GET /courses/:id/students` · `GET /categories`                                     |
+| Enrollments | `POST /enrollments` · `GET /enrollments/me` · `PATCH /enrollments/:id/complete` · `DELETE /enrollments/:id`                                                                                                                                                                |
+| AI          | `POST /recommendations` (guests and students)                                                                                                                                                                                                                              |
+| Admin       | `GET /admin/stats` · `GET /admin/users` · `PATCH /admin/users/:id/status` · `PATCH /admin/instructors/:id/approve` · `GET /admin/courses` · `PATCH /admin/courses/:id/status` · `DELETE /admin/courses/:id` · `GET/POST /admin/categories` · `PATCH /admin/categories/:id` |
+| Super admin | `POST/GET /superadmin/admins` · `DELETE /superadmin/admins/:id` · `PATCH /superadmin/users/:id/role` · `GET /superadmin/audit-logs`                                                                                                                                        |
 
 Conventions: success `{ success: true, data, meta? }`; error `{ success: false, message, errors? }`;
 status codes 400 validation · 401 not signed in · 403 not allowed · 404 · 409 duplicate · 429 rate
@@ -174,17 +177,18 @@ npm run dev                                 # API on :5000, web on :3000
 
 Open http://localhost:3000 and sign in with a demo account.
 
-| Command                                 | What it does                                                                              |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run dev`                           | API + web with reload                                                                     |
-| `npm test`                              | 95 API tests (in-memory MongoDB; the first run downloads a MongoDB binary) + 10 web tests |
-| `npm run typecheck`                     | `tsc` in strict mode across all three workspaces                                          |
-| `npm run lint` / `npm run format:check` | ESLint / Prettier                                                                         |
-| `npm run build`                         | Production build of the web app (`npm run build -w @lp/api` bundles the API)              |
-| `npm run seed`                          | Reset to demo data (refuses in production without `-- --yes`)                             |
-| `npm run create-superadmin`             | Idempotently create the super admin from `SUPERADMIN_*` env vars                          |
-| `npm run ai:check`                      | Test `OPENAI_API_KEY` + `OPENAI_MODEL` with one tiny request, with hints on failure       |
-| `npm run docs:openapi`                  | Regenerate `docs/openapi.json`                                                            |
+| Command                                 | What it does                                                                               |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run dev`                           | API + web with reload                                                                      |
+| `npm test`                              | 105 API tests (in-memory MongoDB; the first run downloads a MongoDB binary) + 10 web tests |
+| `npm run typecheck`                     | `tsc` in strict mode across all three workspaces                                           |
+| `npm run lint` / `npm run format:check` | ESLint / Prettier                                                                          |
+| `npm run build`                         | Production build of the web app (`npm run build -w @lp/api` bundles the API)               |
+| `npm run seed`                          | Reset to demo data (refuses on a remote database without `-- --yes`)                       |
+| `npm run seed -- --small`               | Same, with a small dataset: 7 users, 6 courses, 3 enrollments                              |
+| `npm run create-superadmin`             | Idempotently create the super admin from `SUPERADMIN_*` env vars                           |
+| `npm run ai:check`                      | Test `OPENAI_API_KEY` + `OPENAI_MODEL` with one tiny request, with hints on failure        |
+| `npm run docs:openapi`                  | Regenerate `docs/openapi.json`                                                             |
 
 ### Environment variables
 

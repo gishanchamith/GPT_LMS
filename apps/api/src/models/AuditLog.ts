@@ -1,7 +1,7 @@
 import { Schema, model, type Types } from 'mongoose';
 import { AUDIT_ACTIONS, type AuditAction } from '@lp/shared';
 
-export type AuditTargetType = 'User' | 'Course';
+export type AuditTargetType = 'User' | 'Course' | 'Category';
 
 export interface IAuditLog {
   actor: Types.ObjectId;
@@ -20,7 +20,7 @@ const auditLogSchema = new Schema<IAuditLog>(
     actor: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     actorUsername: { type: String, required: true },
     action: { type: String, enum: Object.values(AUDIT_ACTIONS), required: true, index: true },
-    targetType: { type: String, enum: ['User', 'Course'] },
+    targetType: { type: String, enum: ['User', 'Course', 'Category'] },
     targetId: { type: Schema.Types.ObjectId },
     metadata: { type: Schema.Types.Mixed, default: {} },
     ip: { type: String },

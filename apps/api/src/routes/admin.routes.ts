@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   PERMISSIONS as P,
   adminCourseQuerySchema,
+  createCategorySchema,
+  updateCategorySchema,
   courseStatusSchema,
   idParamSchema,
   userQuerySchema,
@@ -11,6 +13,7 @@ import validate from '../middleware/validate.js';
 import authenticate from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
 import * as admin from '../controllers/admin.controller.js';
+import * as category from '../controllers/category.controller.js';
 
 const router = Router();
 const id = validate(idParamSchema, 'params');
@@ -47,5 +50,20 @@ router.patch(
   admin.setCourseStatus,
 );
 router.delete('/courses/:id', authorize(P.COURSE_DELETE_ANY), id, admin.deleteCourse);
+
+router.get('/categories', authorize(P.CATEGORY_MANAGE), category.listAll);
+router.post(
+  '/categories',
+  authorize(P.CATEGORY_MANAGE),
+  validate(createCategorySchema),
+  category.create,
+);
+router.patch(
+  '/categories/:id',
+  authorize(P.CATEGORY_MANAGE),
+  id,
+  validate(updateCategorySchema),
+  category.update,
+);
 
 export default router;

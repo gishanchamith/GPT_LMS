@@ -42,6 +42,7 @@ export const PERMISSIONS = {
   ADMIN_MANAGE: 'admin:manage',
   ROLE_CHANGE: 'role:change',
   AUDIT_READ: 'audit:read',
+  CATEGORY_MANAGE: 'category:manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -57,6 +58,7 @@ const ADMIN_PERMISSIONS: Permission[] = [
   P.USER_STATUS,
   P.INSTRUCTOR_APPROVE,
   P.STATS_READ,
+  P.CATEGORY_MANAGE,
 ];
 
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {

@@ -1,13 +1,8 @@
 'use client';
 
-import {
-  COURSE_CATEGORIES,
-  COURSE_LEVELS,
-  COURSE_STATUS,
-  type CourseStatus,
-  type Lesson,
-} from '@lp/shared';
+import { COURSE_LEVELS, COURSE_STATUS, type CourseStatus, type Lesson } from '@lp/shared';
 import type { z } from 'zod';
+import { useCategories } from '@/hooks/useCategories';
 import { useForm } from '@/hooks/useForm';
 import { capitalize } from '@/lib/format';
 import { Button, Card, Field, Input, Select, Textarea } from './ui';
@@ -51,6 +46,8 @@ export default function CourseForm<Output>({
   // The form holds raw strings; the schema narrows category/level when it parses.
   const form = useForm(schema, { ...EMPTY_COURSE, ...initial });
   const lessons = form.values.content;
+  // A course may keep a category that has since been hidden, so keep its own in the list.
+  const categories = useCategories(initial?.category);
 
   const setLessons = (next: Lesson[]) => form.setField('content', next);
   const updateLesson = (i: number, key: keyof Lesson, value: string) =>
@@ -86,7 +83,7 @@ export default function CourseForm<Output>({
           <Field label="Category" htmlFor="category" error={form.errors.category}>
             <Select {...form.bind('category')}>
               <option value="">Choose…</option>
-              {COURSE_CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </Select>
