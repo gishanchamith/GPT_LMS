@@ -57,8 +57,18 @@ Asked directly, a language model invents plausible course titles that don't exis
    ids are dropped, so the model cannot smuggle in fake courses (covered by tests).
 
 Also: the key is server-side only, requests time out at 20 s (below Nginx's 30 s
-`proxy_read_timeout`), there is a per-user rate limit of 10 requests per 15 minutes, and prompts
-are capped at 500 characters.
+`proxy_read_timeout`), and prompts are capped at 500 characters.
+
+**Open to guests, with a tighter budget.** Visitors can try the advisor without an account, which
+makes the headline feature visible straight away. Every AI request costs money, so limits are per
+15 minutes: 10 per signed-in student (counted per user) and 5 per guest (counted per IP). Signed-in
+staff are refused, and a suspended account is refused rather than treated as a guest.
+
+**Personalised by onboarding.** New students answer three questions (fields, level, goal). The
+answers drive instant, rule-based suggestions (their fields become the category filter, their
+level ranks first, then the next level up), which need no AI call at all. They are also added to
+the advisor's system prompt, so vague prompts like "what should I learn next?" still get a
+relevant answer.
 
 **Model.** The brief mentions GPT-3, which OpenAI has retired. The API uses a current small chat
 model (`gpt-5.4-mini` by default, configurable with `OPENAI_MODEL`). This was a deliberate

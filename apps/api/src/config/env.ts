@@ -11,7 +11,7 @@ export function assertEnv(): void {
     throw new Error(
       'MONGODB_URI in apps/api/.env still contains placeholders like <cluster>. ' +
         'Paste your Atlas connection string, or run `npm run db:local` and use ' +
-        'MONGODB_URI=mongodb://127.0.0.1:27018/learning-platform?replicaSet=local',
+        'MONGODB_URI=mongodb://127.0.0.1:27018/GPT_LMS?replicaSet=local',
     );
   }
   if (JWT_SECRET === 'change-me') {

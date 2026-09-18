@@ -14,7 +14,7 @@
     "dev:web": "npm run dev -w @lp/web",
     "build": "npm run build -w @lp/web",
     "test": "npm test --workspaces --if-present",
-    "seed": "npm run seed -w @lp/api",
+    "seed": "npm run seed -w @lp/api --",
     "create-superadmin": "npm run create-superadmin -w @lp/api",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,jsx,mjs,cjs,json,css,md}\"",

@@ -14,7 +14,7 @@ const replSet = await MongoMemoryReplSet.create({
 });
 
 console.log('Local MongoDB running. Put this in apps/api/.env:');
-console.log('MONGODB_URI=mongodb://127.0.0.1:27018/learning-platform?replicaSet=local');
+console.log('MONGODB_URI=mongodb://127.0.0.1:27018/GPT_LMS?replicaSet=local');
 
 const stop = async () => {
   await replSet.stop({ doCleanup: false });
