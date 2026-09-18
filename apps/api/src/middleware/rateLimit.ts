@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
@@ -13,7 +13,7 @@ function limiter({
   message,
   byUser = false,
 }: {
-  limit: number;
+  limit: number | ((req: Request) => number);
   message: string;
   byUser?: boolean;
 }): RequestHandler {
@@ -39,7 +39,11 @@ export function createLimiters(enabled = true): Limiters {
   return {
     authLimiter: limiter({ limit: 20, message: 'Too many attempts, try again in 15 minutes' }),
     aiLimiter: limiter({
-      limit: Number(process.env.AI_RATE_LIMIT) || 10,
+      // Guests share an IP-based budget, so they get fewer requests than signed-in students.
+      limit: (req) =>
+        req.user
+          ? Number(process.env.AI_RATE_LIMIT) || 10
+          : Number(process.env.AI_GUEST_RATE_LIMIT) || 5,
       message: 'Recommendation limit reached, try again in 15 minutes',
       byUser: true,
     }),

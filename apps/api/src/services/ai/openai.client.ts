@@ -4,6 +4,9 @@ import ApiError from '../../utils/ApiError.js';
 
 let client: OpenAI | undefined;
 
+export const aiModel = () => process.env.OPENAI_MODEL || 'gpt-5.4-mini';
+export const isAiConfigured = () => Boolean(process.env.OPENAI_API_KEY);
+
 function getClient(): OpenAI {
   if (!process.env.OPENAI_API_KEY) {
     throw new ApiError(503, 'AI recommendations are not configured on this server');
@@ -27,7 +30,7 @@ export async function callOpenAI({
 }): Promise<string> {
   const openai = getClient();
   const params: ChatCompletionCreateParamsNonStreaming = {
-    model: process.env.OPENAI_MODEL || 'gpt-5.4-mini',
+    model: aiModel(),
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },

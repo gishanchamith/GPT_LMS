@@ -3,6 +3,7 @@ import {
   AUDIT_ACTIONS,
   COURSE_CATEGORIES,
   COURSE_LEVELS,
+  LEARNING_GOALS,
   ROLES,
   USER_STATUS,
 } from '@lp/shared';
@@ -44,6 +45,21 @@ const courseFilterParams = [
   query('level', { type: 'string', enum: COURSE_LEVELS }),
   ...pageParams,
 ];
+
+const PREFERENCES: Schema = {
+  type: 'object',
+  required: ['categories', 'level', 'goal'],
+  properties: {
+    categories: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 3,
+      items: { type: 'string', enum: COURSE_CATEGORIES },
+    },
+    level: { type: 'string', enum: COURSE_LEVELS },
+    goal: { type: 'string', enum: Object.values(LEARNING_GOALS) },
+  },
+};
 
 const errorResponse = (description: string) => ({ description, ...json(ref('Error')) });
 
@@ -189,6 +205,17 @@ const auth = {
   '/auth/logout': {
     post: { tags: ['Auth'], summary: 'Clear the session cookie', responses: { 200: success({}) } },
   },
+  '/auth/me/preferences': {
+    put: {
+      tags: ['Auth'],
+      summary: "Save the student's three onboarding answers (field, level, goal)",
+      requestBody: body(PREFERENCES),
+      responses: {
+        200: success({ type: 'object', properties: { user: ref('User') } }),
+        ...errors(400, 401, 403),
+      },
+    },
+  },
   '/auth/me': {
     get: {
       tags: ['Auth'],
@@ -215,6 +242,21 @@ const courses = {
       summary: 'Create a course (active instructors)',
       requestBody: body(ref('CourseInput')),
       responses: { 201: success(ref('Course')), ...errors(400, 401, 403) },
+    },
+  },
+  '/courses/suggested': {
+    get: {
+      tags: ['Courses'],
+      summary: 'Suggestions from the onboarding answers (students; rule-based, no AI)',
+      description:
+        "Published courses in the student's chosen fields, their level first, excluding courses they are enrolled in.",
+      responses: {
+        200: success({
+          type: 'object',
+          properties: { preferences: PREFERENCES, courses: arrayOf(ref('Course')) },
+        }),
+        ...errors(401, 403),
+      },
     },
   },
   '/courses/mine': {
@@ -287,9 +329,12 @@ const recommendations = {
   '/recommendations': {
     post: {
       tags: ['AI'],
-      summary: 'Grounded course recommendations (students; 10 requests / 15 min)',
+      summary: 'Grounded course recommendations (students and guests; rate-limited)',
+      security: [{}, { cookieAuth: [] }, { bearerAuth: [] }],
       description:
-        'The published catalog is retrieved first and the model may only choose from it. ' +
+        'Open to guests (5 requests / 15 min per IP) and students (10 / 15 min). Signed-in students ' +
+        'also get their onboarding answers added as context. The published catalog is retrieved ' +
+        'first and the model may only choose from it. ' +
         'Every returned id is re-validated against the database before it reaches the client.',
       requestBody: body({
         type: 'object',

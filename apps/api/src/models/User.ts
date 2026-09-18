@@ -1,5 +1,14 @@
 import { Schema, model, type HydratedDocument, type Types } from 'mongoose';
-import { ROLES, USER_STATUS, type Role, type UserStatus } from '@lp/shared';
+import {
+  COURSE_CATEGORIES,
+  COURSE_LEVELS,
+  LEARNING_GOALS,
+  ROLES,
+  USER_STATUS,
+  type PreferencesInput,
+  type Role,
+  type UserStatus,
+} from '@lp/shared';
 
 export interface IUser {
   name: string;
@@ -10,11 +19,23 @@ export interface IUser {
   status: UserStatus;
   tokenVersion: number;
   createdBy?: Types.ObjectId;
+  /** Onboarding answers (students). Absent until the student completes onboarding. */
+  preferences?: PreferencesInput & { updatedAt: Date };
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type UserDocument = HydratedDocument<IUser>;
+
+const preferencesSchema = new Schema(
+  {
+    categories: { type: [{ type: String, enum: [...COURSE_CATEGORIES] }], default: undefined },
+    level: { type: String, enum: [...COURSE_LEVELS] },
+    goal: { type: String, enum: Object.values(LEARNING_GOALS) },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
 
 const userSchema = new Schema<IUser>(
   {
@@ -31,6 +52,7 @@ const userSchema = new Schema<IUser>(
     },
     tokenVersion: { type: Number, default: 0 },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    preferences: { type: preferencesSchema, default: undefined },
   },
   {
     timestamps: true,

@@ -12,6 +12,16 @@ export const authorize =
     next();
   };
 
+// For public routes: guests pass, signed-in users need the permission.
+export const allowGuestsOr =
+  (permission: Permission): RequestHandler =>
+  (req, res, next) => {
+    if (req.user && !can(req.user.role, permission)) {
+      throw new ApiError(403, 'Insufficient permissions');
+    }
+    next();
+  };
+
 // Pending instructors can sign in, but can't act until an admin approves them.
 export const requireActive: RequestHandler = (req, res, next) => {
   if (currentUser(req).status !== USER_STATUS.ACTIVE) {

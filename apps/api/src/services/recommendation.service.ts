@@ -1,4 +1,4 @@
-import { COURSE_STATUS } from '@lp/shared';
+import { COURSE_STATUS, LEARNING_GOAL_LABELS } from '@lp/shared';
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import type { UserDocument } from '../models/User.js';
@@ -30,7 +30,15 @@ function loadCatalog() {
     .lean();
 }
 
-function buildSystemPrompt(courses: CatalogCourse[]): string {
+// The onboarding answers, so the advisor can personalise without the student repeating them.
+function describeProfile(student: UserDocument | undefined): string {
+  const prefs = student?.preferences;
+  if (!prefs?.categories?.length) return '';
+  return `
+STUDENT PROFILE (from onboarding; use it when the message is vague): interested in ${prefs.categories.join(', ')}; experience level ${prefs.level}; goal: ${LEARNING_GOAL_LABELS[prefs.goal]}.`;
+}
+
+function buildSystemPrompt(courses: CatalogCourse[], profile: string): string {
   const catalog = courses.map((c) => ({
     id: c._id.toString(),
     title: c.title,
@@ -46,7 +54,7 @@ Reply with JSON only, no markdown, in exactly this shape:
 {"recommendations":[{"courseId":"<id from COURSES>","reason":"<one sentence>"}],"summary":"<1-2 sentences>"}
 Pick 3-5 courses ordered by relevance, preferring a sensible beginner-to-advanced path.
 If nothing fits, return an empty recommendations array and say so in the summary.
-COURSES: ${JSON.stringify(catalog)}`;
+COURSES: ${JSON.stringify(catalog)}${profile}`;
 }
 
 function parseModelJson(raw: string): ModelReply {
@@ -60,8 +68,10 @@ function parseModelJson(raw: string): ModelReply {
   }
 }
 
+// `student` is undefined for guests: they get the same grounded answer, just without a
+// profile or enrollment flags.
 export async function recommendCourses(
-  student: UserDocument,
+  student: UserDocument | undefined,
   prompt: string,
 ): Promise<RecommendationResult> {
   // 1. Retrieve the real catalog.
@@ -71,12 +81,17 @@ export async function recommendCourses(
   }
 
   // 2. Ask the model to choose from that list only.
-  const raw = await callOpenAI({ system: buildSystemPrompt(courses), user: prompt });
+  const raw = await callOpenAI({
+    system: buildSystemPrompt(courses, describeProfile(student)),
+    user: prompt,
+  });
   const parsed = parseModelJson(raw);
 
   // 3. Re-validate every id against the catalog: the model cannot smuggle in fake courses.
   const byId = new Map(courses.map((c) => [c._id.toString(), c]));
-  const enrolledIds = await Enrollment.find({ student: student._id }).select('course').lean();
+  const enrolledIds = student
+    ? await Enrollment.find({ student: student._id }).select('course').lean()
+    : [];
   const enrolled = new Set(enrolledIds.map((e) => e.course.toString()));
 
   const seen = new Set<string>();

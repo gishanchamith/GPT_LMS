@@ -34,6 +34,7 @@ export const PERMISSIONS = {
   ENROLLMENT_READ_OWN: 'enrollment:read:own',
   ENROLLMENT_UPDATE_OWN: 'enrollment:update:own',
   RECOMMENDATION_CREATE: 'recommendation:create',
+  PREFERENCES_UPDATE: 'preferences:update',
   USER_READ: 'user:read',
   USER_STATUS: 'user:status',
   INSTRUCTOR_APPROVE: 'instructor:approve',
@@ -64,6 +65,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
     P.ENROLLMENT_READ_OWN,
     P.ENROLLMENT_UPDATE_OWN,
     P.RECOMMENDATION_CREATE,
+    P.PREFERENCES_UPDATE,
   ],
   [ROLES.INSTRUCTOR]: [
     P.COURSE_CREATE,

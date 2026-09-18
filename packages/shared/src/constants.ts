@@ -42,3 +42,19 @@ export const AUDIT_ACTIONS = {
   ROLE_CHANGED: 'ROLE_CHANGED',
 } as const;
 export type AuditAction = ValueOf<typeof AUDIT_ACTIONS>;
+
+// Onboarding question 3: what the student wants out of learning.
+export const LEARNING_GOALS = {
+  CAREER_CHANGE: 'career-change',
+  GROW_IN_ROLE: 'grow-in-role',
+  BUILD_PROJECT: 'build-project',
+  EXPLORE: 'explore',
+} as const;
+export type LearningGoal = ValueOf<typeof LEARNING_GOALS>;
+
+export const LEARNING_GOAL_LABELS: Readonly<Record<LearningGoal, string>> = {
+  [LEARNING_GOALS.CAREER_CHANGE]: 'Start a new career',
+  [LEARNING_GOALS.GROW_IN_ROLE]: 'Grow in my current role',
+  [LEARNING_GOALS.BUILD_PROJECT]: 'Build a project or side business',
+  [LEARNING_GOALS.EXPLORE]: 'Explore something new for fun',
+};

@@ -549,6 +549,99 @@
         }
       }
     },
+    "/auth/me/preferences": {
+      "put": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Save the student's three onboarding answers (field, level, goal)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "categories",
+                  "level",
+                  "goal"
+                ],
+                "properties": {
+                  "categories": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "Software Engineering",
+                        "Data Science",
+                        "Design",
+                        "Business",
+                        "Cloud & DevOps",
+                        "Cybersecurity"
+                      ]
+                    }
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "beginner",
+                      "intermediate",
+                      "advanced"
+                    ]
+                  },
+                  "goal": {
+                    "type": "string",
+                    "enum": [
+                      "career-change",
+                      "grow-in-role",
+                      "build-project",
+                      "explore"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/E400"
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "403": {
+            "$ref": "#/components/responses/E403"
+          }
+        }
+      }
+    },
     "/auth/me": {
       "get": {
         "tags": [
@@ -727,6 +820,93 @@
           },
           "400": {
             "$ref": "#/components/responses/E400"
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "403": {
+            "$ref": "#/components/responses/E403"
+          }
+        }
+      }
+    },
+    "/courses/suggested": {
+      "get": {
+        "tags": [
+          "Courses"
+        ],
+        "summary": "Suggestions from the onboarding answers (students; rule-based, no AI)",
+        "description": "Published courses in the student's chosen fields, their level first, excluding courses they are enrolled in.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "preferences": {
+                          "type": "object",
+                          "required": [
+                            "categories",
+                            "level",
+                            "goal"
+                          ],
+                          "properties": {
+                            "categories": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 3,
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "Software Engineering",
+                                  "Data Science",
+                                  "Design",
+                                  "Business",
+                                  "Cloud & DevOps",
+                                  "Cybersecurity"
+                                ]
+                              }
+                            },
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "beginner",
+                                "intermediate",
+                                "advanced"
+                              ]
+                            },
+                            "goal": {
+                              "type": "string",
+                              "enum": [
+                                "career-change",
+                                "grow-in-role",
+                                "build-project",
+                                "explore"
+                              ]
+                            }
+                          }
+                        },
+                        "courses": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Course"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/E401"
@@ -1107,8 +1287,17 @@
         "tags": [
           "AI"
         ],
-        "summary": "Grounded course recommendations (students; 10 requests / 15 min)",
-        "description": "The published catalog is retrieved first and the model may only choose from it. Every returned id is re-validated against the database before it reaches the client.",
+        "summary": "Grounded course recommendations (students and guests; rate-limited)",
+        "security": [
+          {},
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Open to guests (5 requests / 15 min per IP) and students (10 / 15 min). Signed-in students also get their onboarding answers added as context. The published catalog is retrieved first and the model may only choose from it. Every returned id is re-validated against the database before it reaches the client.",
         "requestBody": {
           "required": true,
           "content": {

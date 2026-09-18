@@ -155,11 +155,15 @@ export default function CourseDetailPage() {
                 />
                 {canEdit && (
                   <LinkButton
-                    href={isOwner ? `/instructor/courses/${course._id}/edit` : '/admin/courses'}
+                    href={
+                      isOwner
+                        ? `/instructor/courses/${course._id}/edit`
+                        : `/admin/courses/${course._id}/edit`
+                    }
                     variant="secondary"
                     className="w-full"
                   >
-                    {isOwner ? 'Edit course' : 'Moderate in admin'}
+                    Edit course
                   </LinkButton>
                 )}
               </Card>

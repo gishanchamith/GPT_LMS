@@ -5,6 +5,7 @@ import type {
   CourseLevel,
   CourseStatus,
   EnrollmentStatus,
+  LearningGoal,
   Lesson,
   Role,
   UserStatus,
@@ -34,6 +35,19 @@ export interface User {
   status: UserStatus;
   createdAt: string;
   createdBy?: UserRef | string;
+  preferences?: Preferences;
+}
+
+export interface Preferences {
+  categories: CourseCategory[];
+  level: CourseLevel;
+  goal: LearningGoal;
+  updatedAt?: string;
+}
+
+export interface Suggestions {
+  preferences: Preferences | null;
+  courses: CourseSummary[];
 }
 
 export interface CourseSummary {

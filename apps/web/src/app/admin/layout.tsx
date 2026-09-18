@@ -29,7 +29,10 @@ function Sidebar() {
   return (
     <nav className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
       {links.map((link) => {
-        const active = pathname === link.href;
+        // Nested pages (e.g. /admin/courses/[id]/edit) keep their section highlighted.
+        const active =
+          pathname === link.href ||
+          (link.href !== '/admin' && pathname.startsWith(`${link.href}/`));
         return (
           <Link
             key={link.href}

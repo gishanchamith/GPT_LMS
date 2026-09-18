@@ -70,7 +70,13 @@ export async function api<T = unknown>(
 
   const payload = (await res.json().catch(() => null)) as Envelope<T> | null;
   if (!res.ok || payload?.success === false) {
-    const message = payload?.message || `Request failed (${res.status})`;
+    // No JSON body on a 5xx means the API itself didn't answer (e.g. it is down and the
+    // Next rewrite failed), so say that instead of a bare status code.
+    const message =
+      payload?.message ||
+      (res.status >= 500
+        ? 'The server is not responding right now. Please try again in a moment.'
+        : `Request failed (${res.status})`);
     // The API ended this session (expired, suspended, role changed): tell the auth context.
     const sessionEnded =
       (res.status === 401 && path !== '/auth/login' && path !== '/auth/me') ||

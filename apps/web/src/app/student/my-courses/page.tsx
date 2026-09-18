@@ -64,7 +64,7 @@ export default function MyCoursesPage() {
         title="My courses"
         description="Everything you're enrolled in."
         actions={
-          <LinkButton href="/student/recommend" variant="secondary">
+          <LinkButton href="/advisor" variant="secondary">
             Ask the AI advisor
           </LinkButton>
         }
@@ -79,7 +79,7 @@ export default function MyCoursesPage() {
             action={
               <div className="flex gap-2">
                 <LinkButton href="/courses">Browse courses</LinkButton>
-                <LinkButton href="/student/recommend" variant="secondary">
+                <LinkButton href="/advisor" variant="secondary">
                   Get recommendations
                 </LinkButton>
               </div>

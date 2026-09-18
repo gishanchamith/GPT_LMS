@@ -28,6 +28,8 @@ interface AuthState {
   login: (credentials: LoginInput) => Promise<User>;
   register: (details: RegisterInput) => Promise<User>;
   logout: () => Promise<void>;
+  /** Replace the cached user after the API returns a fresh copy (e.g. saved preferences). */
+  updateUser: (user: User) => void;
   /** UX only: hides what the role can't do. The API enforces every rule itself. */
   can: (permission: Permission) => boolean;
   home: string;
@@ -103,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      updateUser: setUser,
       can: (permission) => canRole(user?.role, permission),
       home: user ? ROLE_HOME[user.role] : '/courses',
     }),

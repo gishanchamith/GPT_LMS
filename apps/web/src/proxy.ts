@@ -46,10 +46,9 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const session = readSession(request);
 
-  if (pathname === '/login' || pathname === '/register') {
-    return session ? NextResponse.redirect(new URL(HOME[session.role], request.url)) : undefined;
-  }
-
+  // /login and /register are deliberately not handled here: this cookie is unverified, and
+  // redirecting on a stale one would lock people out of the login page. Those pages redirect
+  // signed-in users themselves, once the API has confirmed the session.
   const rule = RULES.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   if (!rule) return undefined;
 
@@ -65,5 +64,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/login', '/register', '/admin/:path*', '/instructor/:path*', '/student/:path*'],
+  matcher: ['/admin/:path*', '/instructor/:path*', '/student/:path*'],
 };

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { assertEnv } from './config/env.js';
 import { connectDB } from './config/db.js';
 import { createApp } from './app.js';
+import { aiModel, isAiConfigured } from './services/ai/openai.client.js';
 
 assertEnv();
 await connectDB(process.env.MONGODB_URI);
@@ -9,6 +10,11 @@ await connectDB(process.env.MONGODB_URI);
 const port = Number(process.env.PORT) || 5000;
 const server = createApp().listen(port, () => {
   console.log(`API listening on port ${port}`);
+  console.log(
+    isAiConfigured()
+      ? `AI recommendations enabled (model: ${aiModel()})`
+      : 'AI recommendations disabled: set OPENAI_API_KEY in apps/api/.env',
+  );
 });
 
 function shutdown(signal: NodeJS.Signals): void {

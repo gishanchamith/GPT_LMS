@@ -16,8 +16,15 @@ const router = Router();
 const withCourse = [validate(idParamSchema, 'params'), loadCourse];
 
 router.get('/', validate(courseQuerySchema, 'query'), course.list);
-// Registered before '/:id' so "mine" isn't treated as an id.
+// Registered before '/:id' so "mine" and "suggested" aren't treated as ids.
 router.get('/mine', authenticate, authorize(PERMISSIONS.COURSE_CREATE), course.mine);
+// Rule-based suggestions from the student's onboarding answers.
+router.get(
+  '/suggested',
+  authenticate,
+  authorize(PERMISSIONS.RECOMMENDATION_CREATE),
+  course.suggested,
+);
 router.post(
   '/',
   authenticate,

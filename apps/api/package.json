@@ -12,7 +12,8 @@
     "seed": "tsx --env-file-if-exists=.env src/scripts/seed.ts",
     "create-superadmin": "tsx --env-file-if-exists=.env src/scripts/createSuperAdmin.ts",
     "db:local": "tsx src/scripts/localDb.ts",
-    "docs:openapi": "tsx src/scripts/exportOpenapi.ts"
+    "docs:openapi": "tsx src/scripts/exportOpenapi.ts",
+    "ai:check": "tsx --env-file-if-exists=.env src/scripts/checkAi.ts"
   },
   "dependencies": {
     "@lp/shared": "*",

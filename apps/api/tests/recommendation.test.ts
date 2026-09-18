@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ROLES } from '@lp/shared';
 import Enrollment from '../src/models/Enrollment.js';
+import User from '../src/models/User.js';
 import ApiError from '../src/utils/ApiError.js';
 import { callOpenAI } from '../src/services/ai/openai.client.js';
 import { api, bearer, createCourse, createUser } from './helpers.js';
@@ -102,10 +103,40 @@ describe('POST /api/recommendations', () => {
     expect(callOpenAI).not.toHaveBeenCalled();
   });
 
-  it('validates the prompt and restricts the endpoint to students', async () => {
+  it('validates the prompt and refuses signed-in non-students', async () => {
     const instructor = await createUser({ role: ROLES.INSTRUCTOR });
     expect((await ask(student, { prompt: 'hi' })).status).toBe(400);
     expect((await ask(instructor)).status).toBe(403);
-    expect((await api().post('/api/recommendations').send({ prompt })).status).toBe(401);
+  });
+
+  it('works for guests, without enrollment flags or a profile', async () => {
+    reply({ recommendations: [{ courseId: node.id, reason: 'Backend basics.' }], summary: 'x' });
+    const res = await api().post('/api/recommendations').send({ prompt });
+    expect(res.status).toBe(200);
+    expect(res.body.data.recommendations[0].course).toMatchObject({
+      title: 'Node.js Fundamentals',
+      isEnrolled: false,
+    });
+    expect(vi.mocked(callOpenAI).mock.calls[0]![0].system).not.toContain('STUDENT PROFILE');
+  });
+
+  it("adds the student's onboarding answers to the prompt", async () => {
+    await User.updateOne(
+      { _id: student._id },
+      {
+        preferences: {
+          categories: ['Data Science'],
+          level: 'beginner',
+          goal: 'career-change',
+          updatedAt: new Date(),
+        },
+      },
+    );
+    reply({ recommendations: [], summary: '' });
+    await ask();
+    const { system } = vi.mocked(callOpenAI).mock.calls[0]![0];
+    expect(system).toContain('STUDENT PROFILE');
+    expect(system).toContain('Data Science');
+    expect(system).toContain('Start a new career');
   });
 });

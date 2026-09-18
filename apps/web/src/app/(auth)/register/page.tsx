@@ -6,6 +6,7 @@ import { registerSchema, ROLE_HOME, ROLES, USER_STATUS, type RegisterInput } fro
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useForm } from '@/hooks/useForm';
+import { useRedirectIfSignedIn } from '@/hooks/useRedirectIfSignedIn';
 import { Button, Card, Field, Input } from '@/components/ui';
 
 const ROLE_OPTIONS = [
@@ -24,6 +25,7 @@ const INITIAL: RegisterInput = {
 export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
+  useRedirectIfSignedIn();
   const toast = useToast();
   const form = useForm(registerSchema, INITIAL);
 
@@ -34,7 +36,8 @@ export default function RegisterPage() {
         ? 'Account created. An admin will review your instructor application.'
         : `Welcome to LearnHub, ${user.name}!`,
     );
-    router.replace(ROLE_HOME[user.role]);
+    // New students answer 3 quick questions first, so suggestions are ready right away.
+    router.replace(user.role === ROLES.STUDENT ? '/student/onboarding' : ROLE_HOME[user.role]);
   });
 
   return (

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { courseQuerySchema, createCourseSchema, updateCourseSchema } from '@lp/shared';
 import * as courseService from '../services/course.service.js';
+import { suggestCourses } from '../services/preferences.service.js';
 import { ok, created } from '../utils/respond.js';
 import { auditContext, currentCourse, currentUser, validated } from '../utils/request.js';
 
@@ -37,4 +38,8 @@ export async function mine(req: Request, res: Response) {
 
 export async function students(req: Request, res: Response) {
   ok(res, await courseService.listEnrolledStudents(currentUser(req), currentCourse(req)));
+}
+
+export async function suggested(req: Request, res: Response) {
+  ok(res, await suggestCourses(currentUser(req)));
 }

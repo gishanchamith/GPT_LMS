@@ -11,7 +11,7 @@ import { capitalize, plural } from '@/lib/format';
 import type { CourseSummary } from '@/types/api';
 import Pagination from '@/components/Pagination';
 import { AsyncView, EmptyState } from '@/components/States';
-import { Button, Input, PageHeader, Select, Table, Td } from '@/components/ui';
+import { Button, Input, LinkButton, PageHeader, Select, Table, Td } from '@/components/ui';
 
 export default function AdminCoursesPage() {
   const confirm = useConfirm();
@@ -104,7 +104,15 @@ export default function AdminCoursesPage() {
                     </p>
                   </Td>
                   <Td>{c.instructor?.name ?? '—'}</Td>
-                  <Td>{c.enrollmentCount}</Td>
+                  <Td>
+                    <Link
+                      href={`/admin/courses/${c._id}/students`}
+                      className="text-brand-700 hover:underline"
+                      aria-label={`View the ${plural(c.enrollmentCount, 'student')} in ${c.title}`}
+                    >
+                      {c.enrollmentCount}
+                    </Link>
+                  </Td>
                   <Td>
                     <Select
                       value={c.status}
@@ -120,15 +128,27 @@ export default function AdminCoursesPage() {
                       ))}
                     </Select>
                   </Td>
-                  <Td className="text-right">
-                    <Button
-                      variant="dangerGhost"
-                      size="sm"
-                      disabled={busyId === c._id}
-                      onClick={() => remove(c)}
-                    >
-                      Delete
-                    </Button>
+                  <Td>
+                    <div className="flex justify-end gap-1 whitespace-nowrap">
+                      <LinkButton
+                        href={`/admin/courses/${c._id}/students`}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        Students
+                      </LinkButton>
+                      <LinkButton href={`/admin/courses/${c._id}/edit`} variant="ghost" size="sm">
+                        Edit
+                      </LinkButton>
+                      <Button
+                        variant="dangerGhost"
+                        size="sm"
+                        disabled={busyId === c._id}
+                        onClick={() => remove(c)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </Td>
                 </tr>
               ))}

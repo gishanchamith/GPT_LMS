@@ -7,6 +7,7 @@ import { useApiData } from '@/hooks/useApiData';
 import { capitalize } from '@/lib/format';
 import type { CourseSummary } from '@/types/api';
 import CourseCard from '@/components/CourseCard';
+import { ForYou } from '@/components/Suggestions';
 import Pagination from '@/components/Pagination';
 import { AsyncView, CardGridSkeleton, EmptyState } from '@/components/States';
 import { Button, Input, PageHeader, Select } from '@/components/ui';
@@ -51,6 +52,8 @@ function CourseBrowser() {
   return (
     <>
       <PageHeader title="Courses" description="Find your next course." />
+
+      {!hasFilters && filters.page === 1 && <ForYou />}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_12rem_10rem]">
         <Input

@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { recommendationSchema } from '@lp/shared';
+import Link from 'next/link';
+import { LEARNING_GOAL_LABELS, recommendationSchema, ROLES } from '@lp/shared';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useForm } from '@/hooks/useForm';
 import { api, errorMessage } from '@/lib/api';
-import type { Recommendation, RecommendationResult } from '@/types/api';
+import { capitalize } from '@/lib/format';
+import type { Recommendation, RecommendationResult, User } from '@/types/api';
 import CourseCard from '@/components/CourseCard';
 import { EmptyState } from '@/components/States';
 import {
@@ -33,9 +36,17 @@ function EnrollButton({
   course: Recommendation['course'];
   onEnrolled: (courseId: string) => void;
 }) {
+  const { user } = useAuth();
   const toast = useToast();
   const [saving, setSaving] = useState(false);
 
+  if (!user) {
+    return (
+      <LinkButton href="/login?next=/advisor" size="sm" variant="secondary">
+        Log in to enroll
+      </LinkButton>
+    );
+  }
   if (course.isEnrolled) return <Badge tone="green">Enrolled</Badge>;
 
   const enroll = async () => {
@@ -58,7 +69,49 @@ function EnrollButton({
   );
 }
 
-export default function RecommendPage() {
+// Who is asking changes the note above the form, not the advisor itself.
+function AudienceNote({ user }: { user: User | null }) {
+  if (!user) {
+    return (
+      <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 border-brand-200 bg-brand-50 p-4 text-sm">
+        <p className="text-slate-700">
+          You&apos;re trying the advisor as a guest.{' '}
+          <span className="text-slate-600">
+            Create a free account to save your interests and enroll in one click.
+          </span>
+        </p>
+        <LinkButton href="/register" size="sm">
+          Create a free account
+        </LinkButton>
+      </Card>
+    );
+  }
+  const prefs = user.preferences;
+  if (!prefs) {
+    return (
+      <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+        <p className="text-slate-700">
+          Answer 3 quick questions and the advisor will know your background.
+        </p>
+        <LinkButton href="/student/onboarding" size="sm" variant="secondary">
+          Answer 3 questions
+        </LinkButton>
+      </Card>
+    );
+  }
+  return (
+    <p className="mb-4 text-sm text-slate-600">
+      Personalised with your interests: <strong>{prefs.categories.join(', ')}</strong> ·{' '}
+      {capitalize(prefs.level)} · {LEARNING_GOAL_LABELS[prefs.goal]}.{' '}
+      <Link href="/student/onboarding" className="text-brand-700 hover:underline">
+        Edit
+      </Link>
+    </p>
+  );
+}
+
+export default function AdvisorPage() {
+  const { user, loading } = useAuth();
   const [result, setResult] = useState<RecommendationResult | null>(null);
   const form = useForm(recommendationSchema, { prompt: '' });
 
@@ -84,12 +137,30 @@ export default function RecommendPage() {
         },
     );
 
+  const header = (
+    <PageHeader
+      title="AI course advisor"
+      description="Describe what you want to achieve. Recommendations come only from courses in our catalog."
+    />
+  );
+
+  if (!loading && user && user.role !== ROLES.STUDENT) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          title="The advisor is for students and visitors"
+          description="Staff accounts can browse the catalog, but course recommendations are only offered to learners."
+          action={<LinkButton href="/courses">Browse courses</LinkButton>}
+        />
+      </>
+    );
+  }
+
   return (
     <>
-      <PageHeader
-        title="AI course advisor"
-        description="Describe what you want to achieve. Recommendations come only from courses in our catalog."
-      />
+      {header}
+      {!loading && <AudienceNote user={user} />}
 
       <Card className="p-5">
         <form onSubmit={onSubmit} noValidate>

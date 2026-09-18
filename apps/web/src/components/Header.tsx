@@ -13,11 +13,14 @@ interface NavLink {
 }
 
 const NAV: Record<Role | 'guest', NavLink[]> = {
-  guest: [{ href: '/courses', label: 'Courses' }],
+  guest: [
+    { href: '/courses', label: 'Courses' },
+    { href: '/advisor', label: 'AI advisor' },
+  ],
   [ROLES.STUDENT]: [
     { href: '/courses', label: 'Browse' },
     { href: '/student/my-courses', label: 'My courses' },
-    { href: '/student/recommend', label: 'AI advisor' },
+    { href: '/advisor', label: 'AI advisor' },
   ],
   [ROLES.INSTRUCTOR]: [
     { href: '/courses', label: 'Browse' },

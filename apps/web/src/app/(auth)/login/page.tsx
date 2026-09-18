@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { loginSchema, ROLE_HOME } from '@lp/shared';
 import { useAuth } from '@/context/AuthContext';
 import { useForm } from '@/hooks/useForm';
+import { useRedirectIfSignedIn } from '@/hooks/useRedirectIfSignedIn';
 import { Button, Card, Field, Input } from '@/components/ui';
 
 const DEMO_ACCOUNTS = ['student', 'instructor', 'admin', 'superadmin'];
@@ -21,6 +22,7 @@ function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
   const next = safeNext(useSearchParams().get('next'));
+  useRedirectIfSignedIn(next);
   const form = useForm(loginSchema, { username: '', password: '' });
 
   const onSubmit = form.submit(async (credentials) => {

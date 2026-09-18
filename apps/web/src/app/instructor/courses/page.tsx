@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { COURSE_STATUS } from '@lp/shared';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import { useToast } from '@/context/ToastContext';
@@ -17,6 +19,27 @@ export default function InstructorCoursesPage() {
   const toast = useToast();
   const state = useApiData<CourseSummary[]>('/courses/mine');
   const approved = user?.status === 'active';
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Archive hides a course from the catalog but keeps it and its enrollments; publish undoes it.
+  const toggleArchive = async (course: CourseSummary) => {
+    const status =
+      course.status === COURSE_STATUS.ARCHIVED ? COURSE_STATUS.PUBLISHED : COURSE_STATUS.ARCHIVED;
+    setBusyId(course._id);
+    try {
+      await api(`/courses/${course._id}`, { method: 'PUT', body: { status } });
+      state.setData((list) => list.map((c) => (c._id === course._id ? { ...c, status } : c)));
+      toast.success(
+        status === COURSE_STATUS.ARCHIVED
+          ? `“${course.title}” archived. It's hidden from the catalog; enrollments are kept.`
+          : `“${course.title}” is published again.`,
+      );
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const remove = async (course: CourseSummary) => {
     const ok = await confirm({
@@ -111,6 +134,14 @@ export default function InstructorCoursesPage() {
                     >
                       Edit
                     </LinkButton>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      loading={busyId === course._id}
+                      onClick={() => toggleArchive(course)}
+                    >
+                      {course.status === COURSE_STATUS.ARCHIVED ? 'Publish' : 'Archive'}
+                    </Button>
                     <Button variant="dangerGhost" size="sm" onClick={() => remove(course)}>
                       Delete
                     </Button>

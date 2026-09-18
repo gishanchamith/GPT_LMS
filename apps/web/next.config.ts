@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   // swagger-ui lives at /api/docs/ (with the slash); Next's slash-stripping redirect
   // would bounce against Express's slash-adding redirect forever.
   skipTrailingSlashRedirect: true,
+  // The advisor used to be student-only at this path; it is public now.
+  async redirects() {
+    return [{ source: '/student/recommend', destination: '/advisor', permanent: false }];
+  },
   // The browser only ever talks to this origin. /api/* is proxied to Express, so the auth
   // cookie is first-party and sameSite=lax works without any CORS setup.
   async rewrites() {

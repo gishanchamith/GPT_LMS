@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
-import { loginSchema, registerSchema } from '@lp/shared';
+import { loginSchema, preferencesSchema, registerSchema } from '@lp/shared';
 import * as authService from '../services/auth.service.js';
+import { savePreferences } from '../services/preferences.service.js';
 import type { UserDocument } from '../models/User.js';
 import { ok, created } from '../utils/respond.js';
 import { setAuthCookie, clearAuthCookie } from '../utils/cookies.js';
@@ -30,4 +31,9 @@ export function logout(req: Request, res: Response) {
 
 export function me(req: Request, res: Response) {
   ok(res, { user: currentUser(req) });
+}
+
+export async function updatePreferences(req: Request, res: Response) {
+  const user = await savePreferences(currentUser(req), validated(req, 'body', preferencesSchema));
+  ok(res, { user });
 }

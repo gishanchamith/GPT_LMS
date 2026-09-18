@@ -1,4 +1,4 @@
-import { LinkButton } from '@/components/ui';
+import HomeActions from '@/components/HomeActions';
 
 const FEATURES = [
   {
@@ -7,7 +7,7 @@ const FEATURES = [
   },
   {
     title: 'An AI advisor that only suggests real courses',
-    text: 'Describe your goal in your own words. Every recommendation is a course you can enroll in today.',
+    text: 'Describe your goal in your own words, no account needed. Every recommendation is a course you can enroll in today.',
   },
   {
     title: 'Built for instructors too',
@@ -27,14 +27,7 @@ export default function HomePage() {
           Tell us where you want to go, and our AI advisor maps a path through real courses taught
           by real instructors.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <LinkButton href="/courses" size="lg">
-            Browse courses
-          </LinkButton>
-          <LinkButton href="/register" variant="secondary" size="lg">
-            Create a free account
-          </LinkButton>
-        </div>
+        <HomeActions />
       </section>
 
       <section className="mx-auto mt-16 grid max-w-5xl gap-4 sm:grid-cols-3">
