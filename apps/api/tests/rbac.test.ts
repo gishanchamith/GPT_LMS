@@ -267,3 +267,19 @@ describe('GET /api/admin/stats', () => {
     expect(res.body.data.map((u: { username: string }) => u.username)).toEqual([student.username]);
   });
 });
+
+describe('role change safety', () => {
+  const changeRole = (target: UserDocument, role: string) =>
+    api().patch(`/api/superadmin/users/${target._id}/role`).set(bearer(superadmin)).send({ role });
+
+  it("won't strand an instructor's courses by changing their role", async () => {
+    await createCourse(instructor);
+    const res = await changeRole(instructor, 'student');
+    expect(res.status).toBe(409);
+    expect((await User.findById(instructor._id))?.role).toBe('instructor');
+  });
+
+  it('changes the role of an instructor with no courses', async () => {
+    expect((await changeRole(instructor, 'student')).status).toBe(200);
+  });
+});

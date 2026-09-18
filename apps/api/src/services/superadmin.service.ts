@@ -1,5 +1,6 @@
 import { AUDIT_ACTIONS, ROLES, USER_STATUS, type CreateAdminInput, type Role } from '@lp/shared';
 import User, { type UserDocument } from '../models/User.js';
+import Course from '../models/Course.js';
 import ApiError from '../utils/ApiError.js';
 import type { AuditContext } from '../utils/request.js';
 import { assertUnique, hashPassword } from './auth.service.js';
@@ -58,6 +59,17 @@ export async function changeRole(
   const target = await findUserOr404(userId);
   assertCanManage(ctx.user, target);
   if (target.role === role) return target;
+
+  // Nobody else can manage an instructor's courses, so they must be handed off first.
+  if (target.role === ROLES.INSTRUCTOR) {
+    const owned = await Course.countDocuments({ instructor: target._id });
+    if (owned > 0) {
+      throw new ApiError(
+        409,
+        `${target.name} still teaches ${owned} course${owned === 1 ? '' : 's'}. Delete or archive them first.`,
+      );
+    }
+  }
 
   const from = target.role;
   target.role = role;

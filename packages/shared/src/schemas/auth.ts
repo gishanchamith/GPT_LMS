@@ -20,3 +20,14 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  })
+  .refine((d) => d.newPassword !== d.currentPassword, {
+    message: 'Choose a password different from the current one',
+    path: ['newPassword'],
+  });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

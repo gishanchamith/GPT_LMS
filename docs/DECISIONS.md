@@ -4,8 +4,13 @@
 
 **JWT in an httpOnly cookie.** JavaScript cannot read the token, so an XSS bug cannot steal it.
 `secure` in production, `sameSite: 'lax'` (possible because the Vercel rewrite makes the API
-same-origin). The login response also returns the token so Swagger and Postman can use a Bearer
-header.
+same-origin). The token is never put in a response body, so page scripts can't read it at all;
+Swagger, Postman and browsers keep the cookie automatically, and scripts can still send
+`Authorization: Bearer`. The cookie's lifetime is taken from the token's own expiry, so the two
+always match whatever `JWT_EXPIRES_IN` is set to.
+
+**Changing a password** requires the current one, bumps `tokenVersion` (ending every other
+session) and issues a fresh cookie to the device that made the change.
 
 **Instant revocation with `tokenVersion`.** A JWT is a snapshot taken at login. The token carries
 `tv: user.tokenVersion`, and `authenticate` reloads the user on every request and rejects the token
@@ -59,6 +64,19 @@ are capped at 500 characters.
 model (`gpt-5.4-mini` by default, configurable with `OPENAI_MODEL`). This was a deliberate
 substitution.
 
+## Operational safety
+
+- **Client IPs behind two proxies.** In production a request passes through Vercel's rewrite and
+  then Nginx. `TRUST_PROXY=2` makes Express take the visitor's IP from `X-Forwarded-For`, so rate
+  limits and the audit log are per visitor, not per Vercel server. `GET /api/health` echoes the IP
+  the API sees, to check the setting after deploying. Trade-off: someone calling the API domain
+  directly could forge that header to dodge the IP-based limits; restricting Nginx to Vercel's
+  traffic would close that.
+- **The seed script refuses to wipe a remote database** (anything that isn't `localhost`) unless
+  `--yes` is passed, because a `.env` pointing at Atlas during development is an easy mistake.
+- **Changing an instructor's role is refused while they still own courses**, since nobody else
+  could then manage those courses.
+
 ## Data
 
 See [DATABASE.md](DATABASE.md): Enrollment as a separate collection, compound unique index,
@@ -75,19 +93,23 @@ because it adds little at three packages.
 
 ## Testing strategy
 
-73 Vitest + Supertest tests against an in-memory MongoDB **replica set** (needed for transactions),
-one isolated database per test file. They focus on the rules that would be embarrassing to get
-wrong: the registration role whitelist, cross-instructor edits, admin vs admin, suspension
-revocation, duplicate and concurrent enrollment, the single super admin, and AI id validation.
-OpenAI is mocked, so the suite is free and deterministic.
+95 Vitest + Supertest API tests against an in-memory MongoDB **replica set** (needed for
+transactions), one isolated database per test file, plus 10 web tests for the route guard and the
+API client. The tests focus on the rules that would be embarrassing to get wrong: the
+registration role whitelist, cross-instructor edits, admin vs admin, suspension revocation,
+duplicate and concurrent enrollment, the single super admin, and AI id validation. OpenAI is
+mocked, so the suite is free and deterministic. GitHub Actions runs formatting, lint, type-check,
+both test suites and both builds on every push and pull request.
 
 ## Known limitations / future work
 
-- **Refresh tokens**: sessions last 24 h, then the user signs in again.
-- **Email verification and password reset**: not implemented.
+- **Refresh tokens**: sessions last 24 h (`JWT_EXPIRES_IN`), then the user signs in again.
+- **Email verification and forgotten-password reset**: need an email provider. Signed-in users can
+  change their password.
 - **Rate limit store** is in memory, which is fine for one PM2 instance. Use Redis when scaling out.
-- **Search** uses MongoDB `$text`, which matches whole words (stemmed), not prefixes. Atlas Search
-  would add autocomplete.
+- **Search** is a case-insensitive substring match on title, description and category. It scans
+  the collection, which is fine for a catalog of hundreds of courses; Atlas Search would add
+  relevance ranking and typo tolerance at scale.
 - **Uploads, payments and progress tracking per lesson** are out of scope.
-- **CI/CD**: tests, lint and build run locally. A GitHub Actions pipeline would run them on every
-  PR and deploy on merge.
+- **Deployment** is manual (`deploy/deploy-api.sh` and Vercel). CI checks every push but doesn't
+  deploy.

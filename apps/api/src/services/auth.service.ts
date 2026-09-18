@@ -1,6 +1,13 @@
 import bcrypt from 'bcryptjs';
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import { ROLES, USER_STATUS, type LoginInput, type RegisterInput, type Role } from '@lp/shared';
+import {
+  ROLES,
+  USER_STATUS,
+  type ChangePasswordInput,
+  type LoginInput,
+  type RegisterInput,
+  type Role,
+} from '@lp/shared';
 import User, { type UserDocument } from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
 
@@ -65,4 +72,21 @@ export function verifyToken(token: string): TokenPayload {
     throw new Error('Malformed token payload');
   }
   return payload as unknown as TokenPayload;
+}
+
+export async function changePassword(
+  user: UserDocument,
+  { currentPassword, newPassword }: ChangePasswordInput,
+): Promise<UserDocument> {
+  const withHash = await User.findById(user._id).select('+passwordHash');
+  if (!withHash || !(await bcrypt.compare(currentPassword, withHash.passwordHash))) {
+    throw new ApiError(400, 'Current password is incorrect', {
+      currentPassword: 'Current password is incorrect',
+    });
+  }
+  withHash.passwordHash = await hashPassword(newPassword);
+  // Ends every existing session, e.g. on a device someone else might be using.
+  withHash.tokenVersion += 1;
+  await withHash.save();
+  return withHash;
 }

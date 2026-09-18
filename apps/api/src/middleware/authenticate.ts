@@ -48,12 +48,18 @@ const authenticate: RequestHandler = async (req, res, next) => {
 
 export default authenticate;
 
-// For public routes that behave differently for signed-in users. Never rejects.
+// For public routes that behave differently for signed-in users. An expired or revoked
+// session simply continues as a guest (and the dead cookie is cleared), but a suspended
+// account is refused: suspension shouldn't be escapable by acting as a visitor.
 export const optionalAuth: RequestHandler = async (req, res, next) => {
   const token = readToken(req);
   if (token) {
-    const { user } = await resolveUser(token);
+    const { user, error } = await resolveUser(token);
     if (user) req.user = user;
+    else {
+      clearAuthCookie(res);
+      if (error.statusCode === 403) throw error;
+    }
   }
   next();
 };

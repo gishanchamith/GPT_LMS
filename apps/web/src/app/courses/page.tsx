@@ -95,7 +95,7 @@ function CourseBrowser() {
             title={hasFilters ? 'No courses match your filters' : 'No courses yet'}
             description={
               hasFilters
-                ? 'Search matches whole words in titles and descriptions. Try a broader term.'
+                ? 'Try a shorter or broader search term, or clear the filters.'
                 : 'Check back soon — instructors are preparing new material.'
             }
             action={

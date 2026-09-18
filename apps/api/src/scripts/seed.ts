@@ -8,6 +8,7 @@ import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import AuditLog from '../models/AuditLog.js';
 import { hashPassword } from '../services/auth.service.js';
+import { isLocalDatabase } from '../utils/database.js';
 import { COURSES, DEMO_PASSWORD, ENROLLMENTS, USERS } from './seedData.js';
 
 // Seed data refers to rows by index or title; fail loudly if one doesn't exist.
@@ -99,9 +100,15 @@ async function seed() {
   console.log(`${courses.length} courses, ${ENROLLMENTS.length} enrollments`);
 }
 
+// Seeding deletes every user, course and enrollment first, so it only runs unprompted
+// against a database on this machine. Anything else (Atlas, production) needs --yes.
 const confirmed = process.argv.includes('--yes');
-if (process.env.NODE_ENV === 'production' && !confirmed) {
-  console.error('Refusing to wipe a production database. Re-run with: npm run seed -- --yes');
+const remote = !isLocalDatabase(process.env.MONGODB_URI);
+if ((remote || process.env.NODE_ENV === 'production') && !confirmed) {
+  console.error(
+    'Refusing to wipe a non-local database (this deletes all users, courses and enrollments).\n' +
+      'If that is really what you want, re-run with: npm run seed -- --yes',
+  );
   process.exitCode = 1;
 } else {
   try {

@@ -40,7 +40,7 @@ const pageParams = [
   query('limit', { type: 'integer', minimum: 1, maximum: 50, default: 10 }),
 ];
 const courseFilterParams = [
-  query('search', { type: 'string' }, 'Full-text search over title and description'),
+  query('search', { type: 'string' }, 'Case-insensitive match on title, description or category'),
   query('category', { type: 'string', enum: COURSE_CATEGORIES }),
   query('level', { type: 'string', enum: COURSE_LEVELS }),
   ...pageParams,
@@ -174,8 +174,8 @@ const auth = {
       }),
       responses: {
         201: success(
-          { type: 'object', properties: { user: ref('User'), token: { type: 'string' } } },
-          { description: 'Created; also sets the httpOnly `token` cookie' },
+          { type: 'object', properties: { user: ref('User') } },
+          { description: 'Created; the session is set as the httpOnly `token` cookie' },
         ),
         ...errors(400, 409, 429),
       },
@@ -184,7 +184,7 @@ const auth = {
   '/auth/login': {
     post: {
       tags: ['Auth'],
-      summary: 'Log in (sets the httpOnly cookie; token also returned for API clients)',
+      summary: 'Log in (the session is set as an httpOnly cookie, never returned in the body)',
       requestBody: body({
         type: 'object',
         required: ['username', 'password'],
@@ -194,16 +194,34 @@ const auth = {
         },
       }),
       responses: {
-        200: success({
-          type: 'object',
-          properties: { user: ref('User'), token: { type: 'string' } },
-        }),
+        200: success({ type: 'object', properties: { user: ref('User') } }),
         ...errors(400, 401, 403, 429),
       },
     },
   },
   '/auth/logout': {
     post: { tags: ['Auth'], summary: 'Clear the session cookie', responses: { 200: success({}) } },
+  },
+  '/auth/me/password': {
+    put: {
+      tags: ['Auth'],
+      summary: 'Change your password (signs out every other session)',
+      requestBody: body({
+        type: 'object',
+        required: ['currentPassword', 'newPassword'],
+        properties: {
+          currentPassword: { type: 'string' },
+          newPassword: { type: 'string', minLength: 8 },
+        },
+      }),
+      responses: {
+        200: success(
+          { type: 'object', properties: { user: ref('User') } },
+          { description: 'Changed; a fresh session cookie is set for this client' },
+        ),
+        ...errors(400, 401, 429),
+      },
+    },
   },
   '/auth/me/preferences': {
     put: {
@@ -313,6 +331,14 @@ const enrollments = {
       tags: ['Enrollments'],
       summary: "The signed-in student's enrollments",
       responses: { 200: success(arrayOf(ref('Enrollment'))), ...errors(401, 403) },
+    },
+  },
+  '/enrollments/{id}': {
+    parameters: [idParam],
+    delete: {
+      tags: ['Enrollments'],
+      summary: 'Leave a course (your own enrollment)',
+      responses: { 200: success({}), ...errors(401, 403, 404) },
     },
   },
   '/enrollments/{id}/complete': {
@@ -548,8 +574,9 @@ export const openapiSpec = {
     version: '1.0.0',
     description:
       'All responses use `{ success, data, meta? }` or `{ success: false, message, errors? }`.\n\n' +
-      'Authenticate with **POST /auth/login** — the browser keeps the httpOnly cookie. ' +
-      'For API clients, copy `data.token` into **Authorize → bearerAuth**.',
+      'Authenticate with **POST /auth/login**: the session is an httpOnly cookie, which ' +
+      'Swagger, Postman and browsers all keep automatically. Scripts may also send ' +
+      '`Authorization: Bearer <jwt>`.',
   },
   servers: [{ url: '/api' }],
   security: [{ cookieAuth: [] }, { bearerAuth: [] }],

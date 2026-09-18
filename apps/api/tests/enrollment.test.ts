@@ -96,3 +96,31 @@ describe('GET /api/enrollments/me', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('DELETE /api/enrollments/:id', () => {
+  it('lets a student leave a course and frees the seat', async () => {
+    const enrolled = await api()
+      .post('/api/enrollments')
+      .set(bearer(student))
+      .send({ courseId: course.id });
+    const res = await api()
+      .delete(`/api/enrollments/${enrolled.body.data._id}`)
+      .set(bearer(student));
+    expect(res.status).toBe(200);
+    expect((await Course.findById(course._id))?.enrollmentCount).toBe(0);
+    expect((await api().get('/api/enrollments/me').set(bearer(student))).body.data).toEqual([]);
+  });
+
+  it("can't remove someone else's enrollment", async () => {
+    const other = await createUser({ role: ROLES.STUDENT });
+    const enrolled = await api()
+      .post('/api/enrollments')
+      .set(bearer(other))
+      .send({ courseId: course.id });
+    const res = await api()
+      .delete(`/api/enrollments/${enrolled.body.data._id}`)
+      .set(bearer(student));
+    expect(res.status).toBe(404);
+    expect((await Course.findById(course._id))?.enrollmentCount).toBe(1);
+  });
+});

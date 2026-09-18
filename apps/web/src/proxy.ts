@@ -21,6 +21,7 @@ const RULES: [prefix: string, roles: Role[]][] = [
   ['/admin', ['admin', 'superadmin']],
   ['/instructor', ['instructor']],
   ['/student', ['student']],
+  ['/account', ['student', 'instructor', 'admin', 'superadmin']],
 ];
 
 interface Session {
@@ -64,5 +65,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/instructor/:path*', '/student/:path*'],
+  matcher: ['/admin/:path*', '/instructor/:path*', '/student/:path*', '/account'],
 };

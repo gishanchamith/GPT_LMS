@@ -3,7 +3,7 @@
   "info": {
     "title": "Learning Platform API",
     "version": "1.0.0",
-    "description": "All responses use `{ success, data, meta? }` or `{ success: false, message, errors? }`.\n\nAuthenticate with **POST /auth/login** — the browser keeps the httpOnly cookie. For API clients, copy `data.token` into **Authorize → bearerAuth**."
+    "description": "All responses use `{ success, data, meta? }` or `{ success: false, message, errors? }`.\n\nAuthenticate with **POST /auth/login**: the session is an httpOnly cookie, which Swagger, Postman and browsers all keep automatically. Scripts may also send `Authorization: Bearer <jwt>`."
   },
   "servers": [
     {
@@ -411,7 +411,7 @@
         },
         "responses": {
           "201": {
-            "description": "Created; also sets the httpOnly `token` cookie",
+            "description": "Created; the session is set as the httpOnly `token` cookie",
             "content": {
               "application/json": {
                 "schema": {
@@ -426,9 +426,6 @@
                       "properties": {
                         "user": {
                           "$ref": "#/components/schemas/User"
-                        },
-                        "token": {
-                          "type": "string"
                         }
                       }
                     }
@@ -454,7 +451,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Log in (sets the httpOnly cookie; token also returned for API clients)",
+        "summary": "Log in (the session is set as an httpOnly cookie, never returned in the body)",
         "requestBody": {
           "required": true,
           "content": {
@@ -496,9 +493,6 @@
                       "properties": {
                         "user": {
                           "$ref": "#/components/schemas/User"
-                        },
-                        "token": {
-                          "type": "string"
                         }
                       }
                     }
@@ -545,6 +539,72 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/auth/me/password": {
+      "put": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Change your password (signs out every other session)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed; a fresh session cookie is set for this client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/E400"
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "429": {
+            "$ref": "#/components/responses/E429"
           }
         }
       }
@@ -703,7 +763,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Full-text search over title and description"
+            "description": "Case-insensitive match on title, description or category"
           },
           {
             "name": "category",
@@ -1234,6 +1294,52 @@
         }
       }
     },
+    "/enrollments/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Enrollments"
+        ],
+        "summary": "Leave a course (your own enrollment)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {}
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/E401"
+          },
+          "403": {
+            "$ref": "#/components/responses/E403"
+          },
+          "404": {
+            "$ref": "#/components/responses/E404"
+          }
+        }
+      }
+    },
     "/enrollments/{id}/complete": {
       "parameters": [
         {
@@ -1700,7 +1806,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Full-text search over title and description"
+            "description": "Case-insensitive match on title, description or category"
           },
           {
             "name": "category",

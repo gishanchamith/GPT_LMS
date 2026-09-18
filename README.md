@@ -27,12 +27,16 @@ buttons for these accounts.
 ## Features
 
 **Students**: browse, search and filter courses (category, level, pagination); view course
-details and the lesson outline; enroll with a success message; see "My courses" with status and
-mark courses completed; AI advisor ("I want to be a software engineer, what courses should I
+details and the lesson outline; enroll with a success message; see "My courses" with status,
+mark courses completed or leave them; AI advisor ("I want to be a software engineer, what courses should I
 follow?") returns a summary plus 3–5 real courses with a reason each and an Enroll button.
 New students answer **3 quick questions** (fields, experience level, goal); they get instant
 suggestions and one-click filtered catalog links, and the AI advisor uses the answers as context.
 **Guests** can try the AI advisor without an account (5 requests per 15 minutes per IP).
+Archived courses stay open to students already enrolled in them.
+
+**Everyone signed in** has an Account page to see their profile and change their password
+(which signs out their other sessions).
 
 **Instructors**: create, edit and delete their own courses (title, description, category, level,
 draft/published/archived, ordered lessons); view a table of enrolled students (name, email, date).
@@ -47,18 +51,18 @@ the audit log of every privileged action.
 
 ## Tech stack, and why
 
-| Layer      | Choice                                                                              | Why                                                                                                               |
-| ---------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Language   | **TypeScript** (strict) in the API, web app and shared package                      | Domain and request types come from one set of zod schemas; `npm run typecheck` runs `tsc` everywhere              |
-| Frontend   | **Next.js 16** (App Router), React 19, Tailwind CSS 4                               | File-based routing, `proxy.ts` for pre-render role redirects, rewrites make the API same-origin                   |
-| Backend    | **Express 5** on Node 22                                                            | Minimal and explicit; Express 5 forwards async errors to the error handler natively                               |
-| Database   | **MongoDB Atlas** + Mongoose 9                                                      | Flexible course content; partial and compound unique indexes enforce invariants; transactions for cascade deletes |
-| Auth       | JWT in an **httpOnly cookie**, bcrypt (cost 12)                                     | XSS can't read the token; `tokenVersion` enables instant revocation                                               |
-| Validation | **zod 4** in a shared package                                                       | The same schema validates the React form and the API request                                                      |
-| AI         | **OpenAI** chat completions (JSON mode)                                             | Grounded on the real catalog; every id re-validated server-side                                                   |
-| Quality    | Vitest + Supertest + mongodb-memory-server, ESLint 10 + typescript-eslint, Prettier | 73 API tests against a real (in-memory) MongoDB replica set                                                       |
-| Docs       | OpenAPI 3 + swagger-ui                                                              | Live, try-it-out documentation at `/api/docs`                                                                     |
-| Hosting    | Vercel (web) · EC2 + Nginx + PM2 + certbot (API) · Atlas                            | HTTPS end to end; Atlas allow-lists only the EC2 IP                                                               |
+| Layer      | Choice                                                                                                                                   | Why                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Language   | **TypeScript** (strict) in the API, web app and shared package                                                                           | Domain and request types come from one set of zod schemas; `npm run typecheck` runs `tsc` everywhere              |
+| Frontend   | **Next.js 16** (App Router), React 19, Tailwind CSS 4                                                                                    | File-based routing, `proxy.ts` for pre-render role redirects, rewrites make the API same-origin                   |
+| Backend    | **Express 5** on Node 22                                                                                                                 | Minimal and explicit; Express 5 forwards async errors to the error handler natively                               |
+| Database   | **MongoDB Atlas** + Mongoose 9                                                                                                           | Flexible course content; partial and compound unique indexes enforce invariants; transactions for cascade deletes |
+| Auth       | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `PUT /auth/me/password` · `PUT /auth/me/preferences` |
+| Validation | **zod 4** in a shared package                                                                                                            | The same schema validates the React form and the API request                                                      |
+| AI         | **OpenAI** chat completions (JSON mode)                                                                                                  | Grounded on the real catalog; every id re-validated server-side                                                   |
+| Quality    | Vitest + Supertest + mongodb-memory-server, ESLint 10 + typescript-eslint, Prettier, GitHub Actions                                      | 95 API tests against a real (in-memory) MongoDB replica set, 10 web tests, CI on every push                       |
+| Docs       | OpenAPI 3 + swagger-ui                                                                                                                   | Live, try-it-out documentation at `/api/docs`                                                                     |
+| Hosting    | Vercel (web) · EC2 + Nginx + PM2 + certbot (API) · Atlas                                                                                 | HTTPS end to end; Atlas allow-lists only the EC2 IP                                                               |
 
 ## Architecture
 
@@ -127,14 +131,14 @@ re-checks everything, re-reading the user from the database on every request.
 
 ## API
 
-29 endpoints, all documented and runnable in Swagger at **`/api/docs/`**. For Postman, import
+31 endpoints, all documented and runnable in Swagger at **`/api/docs/`**. For Postman, import
 [`docs/openapi.json`](docs/openapi.json).
 
 | Area        | Endpoints                                                                                                                                                                                                          |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Auth        | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `PUT /auth/me/preferences`                                                                                                     |
+| Auth        | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `PUT /auth/me/password` · `PUT /auth/me/preferences`                                                                           |
 | Courses     | `GET /courses?search&category&level&page&limit` · `GET /courses/:id` · `POST /courses` · `PUT /courses/:id` · `DELETE /courses/:id` · `GET /courses/mine` · `GET /courses/suggested` · `GET /courses/:id/students` |
-| Enrollments | `POST /enrollments` · `GET /enrollments/me` · `PATCH /enrollments/:id/complete`                                                                                                                                    |
+| Enrollments | `POST /enrollments` · `GET /enrollments/me` · `PATCH /enrollments/:id/complete` · `DELETE /enrollments/:id`                                                                                                        |
 | AI          | `POST /recommendations` (guests and students)                                                                                                                                                                      |
 | Admin       | `GET /admin/stats` · `GET /admin/users` · `PATCH /admin/users/:id/status` · `PATCH /admin/instructors/:id/approve` · `GET /admin/courses` · `PATCH /admin/courses/:id/status` · `DELETE /admin/courses/:id`        |
 | Super admin | `POST/GET /superadmin/admins` · `DELETE /superadmin/admins/:id` · `PATCH /superadmin/users/:id/role` · `GET /superadmin/audit-logs`                                                                                |
@@ -170,23 +174,23 @@ npm run dev                                 # API on :5000, web on :3000
 
 Open http://localhost:3000 and sign in with a demo account.
 
-| Command                                 | What it does                                                                        |
-| --------------------------------------- | ----------------------------------------------------------------------------------- |
-| `npm run dev`                           | API + web with reload                                                               |
-| `npm test`                              | 73 API tests (in-memory MongoDB; the first run downloads a MongoDB binary)          |
-| `npm run typecheck`                     | `tsc` in strict mode across all three workspaces                                    |
-| `npm run lint` / `npm run format:check` | ESLint / Prettier                                                                   |
-| `npm run build`                         | Production build of the web app (`npm run build -w @lp/api` bundles the API)        |
-| `npm run seed`                          | Reset to demo data (refuses in production without `-- --yes`)                       |
-| `npm run create-superadmin`             | Idempotently create the super admin from `SUPERADMIN_*` env vars                    |
-| `npm run ai:check`                      | Test `OPENAI_API_KEY` + `OPENAI_MODEL` with one tiny request, with hints on failure |
-| `npm run docs:openapi`                  | Regenerate `docs/openapi.json`                                                      |
+| Command                                 | What it does                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run dev`                           | API + web with reload                                                                     |
+| `npm test`                              | 95 API tests (in-memory MongoDB; the first run downloads a MongoDB binary) + 10 web tests |
+| `npm run typecheck`                     | `tsc` in strict mode across all three workspaces                                          |
+| `npm run lint` / `npm run format:check` | ESLint / Prettier                                                                         |
+| `npm run build`                         | Production build of the web app (`npm run build -w @lp/api` bundles the API)              |
+| `npm run seed`                          | Reset to demo data (refuses in production without `-- --yes`)                             |
+| `npm run create-superadmin`             | Idempotently create the super admin from `SUPERADMIN_*` env vars                          |
+| `npm run ai:check`                      | Test `OPENAI_API_KEY` + `OPENAI_MODEL` with one tiny request, with hints on failure       |
+| `npm run docs:openapi`                  | Regenerate `docs/openapi.json`                                                            |
 
 ### Environment variables
 
 **API (`apps/api/.env`)**: `MONGODB_URI`, `JWT_SECRET` (≥32 chars in production),
 `JWT_EXPIRES_IN` (default `1d`), `PORT` (5000), `CLIENT_ORIGIN`, `OPENAI_API_KEY`, `OPENAI_MODEL`,
-`OPENAI_TIMEOUT_MS`, `AI_RATE_LIMIT`, `SUPERADMIN_NAME/USERNAME/EMAIL/PASSWORD`, `SEED_PASSWORD`.
+`OPENAI_TIMEOUT_MS`, `AI_RATE_LIMIT`, `AI_GUEST_RATE_LIMIT`, `TRUST_PROXY`, `SUPERADMIN_NAME/USERNAME/EMAIL/PASSWORD`, `SEED_PASSWORD`.
 See [`apps/api/.env.example`](apps/api/.env.example).
 
 **Web (`apps/web/.env.local` / Vercel)**: `API_URL`, `NEXT_PUBLIC_DEMO_MODE`.
@@ -213,6 +217,9 @@ Longer write-up with trade-offs: [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Known limitations and future work
 
-Refresh tokens, email verification and password reset, a Redis-backed rate limiter for
-multi-instance deploys, Atlas Search for prefix/fuzzy search, per-lesson progress, file uploads,
-payments, and a CI/CD pipeline (GitHub Actions running lint, tests and build on every PR).
+Refresh tokens, email verification and forgotten-password reset by email, a Redis-backed rate
+limiter for multi-instance deploys, Atlas Search for fuzzy search at scale, per-lesson progress,
+file uploads, payments, automatic deployment from CI, and browser (end-to-end) tests in CI.
+
+GitHub Actions already runs formatting, lint, type-check, all tests and both builds on every push
+and pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).

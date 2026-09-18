@@ -52,9 +52,4 @@ const courseSchema = new Schema<ICourse>(
   { timestamps: true, versionKey: false },
 );
 
-courseSchema.index(
-  { title: 'text', description: 'text' },
-  { weights: { title: 3, description: 1 } },
-);
-
 export default model<ICourse>('Course', courseSchema);

@@ -1,6 +1,6 @@
 {
   "name": "GPT_LMS",
-  "private": false,
+  "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -13,7 +13,7 @@
     "dev:api": "npm run dev -w @lp/api",
     "dev:web": "npm run dev -w @lp/web",
     "build": "npm run build -w @lp/web",
-    "test": "npm test -w @lp/api",
+    "test": "npm test --workspaces --if-present",
     "seed": "npm run seed -w @lp/api",
     "create-superadmin": "npm run create-superadmin -w @lp/api",
     "lint": "eslint .",

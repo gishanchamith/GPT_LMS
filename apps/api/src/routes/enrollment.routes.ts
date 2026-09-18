@@ -21,5 +21,11 @@ router.patch(
   validate(idParamSchema, 'params'),
   enrollment.complete,
 );
+router.delete(
+  '/:id',
+  authorize(PERMISSIONS.ENROLLMENT_UPDATE_OWN),
+  validate(idParamSchema, 'params'),
+  enrollment.leave,
+);
 
 export default router;

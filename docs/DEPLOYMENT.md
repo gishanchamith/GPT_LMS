@@ -28,7 +28,8 @@ npm ci -w @lp/api -w @lp/shared          # dev deps included: esbuild builds, ts
 npm run build -w @lp/api                 # → apps/api/dist/server.js
 
 npm run create-superadmin -w @lp/api     # idempotent
-npm run seed -w @lp/api -- --yes         # optional demo data (wipes the database!)
+npm run seed -w @lp/api -- --yes         # optional demo data; wipes the database, so it
+                                         # refuses to run on a remote DB without --yes
 
 cd apps/api && pm2 start ecosystem.config.cjs && pm2 save && pm2 startup
 ```
@@ -58,6 +59,11 @@ Later deploys: `./deploy/deploy-api.sh` (pull, install, `pm2 startOrReload`, hea
    calls, since the browser normally goes through the rewrite).
 
 ## 4. Verify
+
+- In `apps/api/.env` on the server set `TRUST_PROXY=2` (Vercel + Nginx), restart, then open
+  `https://<vercel-app>/api/health` from your own machine: `clientIp` should be **your** public IP.
+  If it shows an AWS/Vercel address instead, the proxy count is wrong and every visitor would
+  share one rate-limit bucket.
 
 - `https://<vercel-app>/api/health` → `{"success":true,"data":{"status":"ok","db":"connected"}}`
 - `https://<vercel-app>/api/docs/` → Swagger UI

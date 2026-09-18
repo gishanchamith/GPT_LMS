@@ -15,7 +15,7 @@ import Course, { type CourseDocument } from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import type { UserDocument } from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
-import { paginationMeta } from '../utils/respond.js';
+import { escapeRegex, paginationMeta } from '../utils/respond.js';
 import type { AuditContext } from '../utils/request.js';
 import { logAction } from './audit.service.js';
 
@@ -48,9 +48,15 @@ export function assertCanModifyCourse(
   throw new ApiError(403, 'You can only modify your own courses');
 }
 
-function canSeeUnpublished(user: UserDocument | undefined, course: CourseDocument): boolean {
+// Owners and admins see drafts and archived courses. So do students already enrolled:
+// archiving hides a course from the catalog, not from the people taking it.
+async function canSeeUnpublished(
+  user: UserDocument | undefined,
+  course: CourseDocument,
+): Promise<boolean> {
   if (!user) return false;
-  return can(user.role, P.COURSE_READ_ANY) || isOwner(user, course);
+  if (can(user.role, P.COURSE_READ_ANY) || isOwner(user, course)) return true;
+  return Boolean(await Enrollment.exists({ student: user._id, course: course._id }));
 }
 
 export function buildCourseFilter({
@@ -63,15 +69,18 @@ export function buildCourseFilter({
   if (status) filter.status = status;
   if (category) filter.category = category;
   if (level) filter.level = level;
-  if (search) filter.$text = { $search: search };
+  if (search) {
+    // Case-insensitive substring match, so "soft" finds "Software". A plain scan is fine for
+    // a catalog of this size; Atlas Search would be the next step at scale.
+    const rx = new RegExp(escapeRegex(search), 'i');
+    filter.$or = [{ title: rx }, { description: rx }, { category: rx }];
+  }
   return filter;
 }
 
 export async function listCourses(filter: Record<string, unknown>, { page, limit }: Pagination) {
   // _id breaks ties so pages never overlap when createdAt values collide (e.g. bulk inserts).
-  const sort: Record<string, -1 | { $meta: 'textScore' }> = filter.$text
-    ? { score: { $meta: 'textScore' }, _id: -1 }
-    : { createdAt: -1, _id: -1 };
+  const sort = { createdAt: -1 as const, _id: -1 as const };
   const [courses, total] = await Promise.all([
     Course.find(filter)
       .select('-content')
@@ -92,7 +101,7 @@ export function listPublished(query: CourseQuery) {
 
 export async function getCourseDetail(course: CourseDocument, user: UserDocument | undefined) {
   // Unpublished courses are invisible, not forbidden: don't confirm they exist.
-  if (course.status !== COURSE_STATUS.PUBLISHED && !canSeeUnpublished(user, course)) {
+  if (course.status !== COURSE_STATUS.PUBLISHED && !(await canSeeUnpublished(user, course))) {
     throw new ApiError(404, 'Course not found');
   }
   await course.populate('instructor', INSTRUCTOR_FIELDS);

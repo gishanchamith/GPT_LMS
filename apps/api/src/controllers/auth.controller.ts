@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { loginSchema, preferencesSchema, registerSchema } from '@lp/shared';
+import { changePasswordSchema, loginSchema, preferencesSchema, registerSchema } from '@lp/shared';
 import * as authService from '../services/auth.service.js';
 import { savePreferences } from '../services/preferences.service.js';
 import type { UserDocument } from '../models/User.js';
@@ -7,11 +7,11 @@ import { ok, created } from '../utils/respond.js';
 import { setAuthCookie, clearAuthCookie } from '../utils/cookies.js';
 import { currentUser, validated } from '../utils/request.js';
 
-// The cookie is what the browser uses; the token in the body is for Postman/Swagger.
+// The token only travels in the httpOnly cookie, never in a JSON body page scripts can read.
+// Swagger and Postman keep the cookie automatically; Bearer headers still work for scripts.
 function issueSession(res: Response, user: UserDocument) {
-  const token = authService.signToken(user);
-  setAuthCookie(res, token);
-  return { user, token };
+  setAuthCookie(res, authService.signToken(user));
+  return { user };
 }
 
 export async function register(req: Request, res: Response) {
@@ -36,4 +36,13 @@ export function me(req: Request, res: Response) {
 export async function updatePreferences(req: Request, res: Response) {
   const user = await savePreferences(currentUser(req), validated(req, 'body', preferencesSchema));
   ok(res, { user });
+}
+
+export async function changePassword(req: Request, res: Response) {
+  const user = await authService.changePassword(
+    currentUser(req),
+    validated(req, 'body', changePasswordSchema),
+  );
+  // Other devices are signed out (tokenVersion bumped); this one gets a fresh session.
+  ok(res, issueSession(res, user));
 }

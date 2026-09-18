@@ -48,17 +48,17 @@ erDiagram
 
 ## Indexes and why each exists
 
-| Collection  | Index                                                     | Purpose                                                                                        |
-| ----------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| users       | `username` unique, `email` unique                         | Login lookup; no duplicate accounts (values are lowercased first)                              |
-| users       | `{ role: 1 }` **unique, partial** on `role: 'superadmin'` | MongoDB itself guarantees there is exactly one super admin, even if application code has a bug |
-| users       | `role`, `status`                                          | Admin user filters, pending-instructor queue                                                   |
-| courses     | `instructor`                                              | "My courses"                                                                                   |
-| courses     | `category`, `status`                                      | Catalog filters; public list only shows `published`                                            |
-| courses     | text index on `title` (weight 3) + `description`          | `?search=` without extra infrastructure                                                        |
-| enrollments | `{ student: 1, course: 1 }` **unique**                    | Duplicate enrollment is impossible, even for two simultaneous requests (tested)                |
-| enrollments | `student`, `course`                                       | "My enrollments" and "students in this course"                                                 |
-| auditlogs   | `actor`, `action`, `createdAt: -1`                        | Filtered, newest-first audit screen                                                            |
+| Collection  | Index                                                     | Purpose                                                                                                         |
+| ----------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| users       | `username` unique, `email` unique                         | Login lookup; no duplicate accounts (values are lowercased first)                                               |
+| users       | `{ role: 1 }` **unique, partial** on `role: 'superadmin'` | MongoDB itself guarantees there is exactly one super admin, even if application code has a bug                  |
+| users       | `role`, `status`                                          | Admin user filters, pending-instructor queue                                                                    |
+| courses     | `instructor`                                              | "My courses"                                                                                                    |
+| courses     | `category`, `status`                                      | Catalog filters; public list only shows `published`                                                             |
+| courses     | `createdAt` sort + `_id` tiebreak                         | Stable newest-first pages. Search is a case-insensitive substring match, so it needs no text index at this size |
+| enrollments | `{ student: 1, course: 1 }` **unique**                    | Duplicate enrollment is impossible, even for two simultaneous requests (tested)                                 |
+| enrollments | `student`, `course`                                       | "My enrollments" and "students in this course"                                                                  |
+| auditlogs   | `actor`, `action`, `createdAt: -1`                        | Filtered, newest-first audit screen                                                                             |
 
 ## Modelling decisions
 

@@ -54,3 +54,14 @@ export async function completeEnrollment(
   }
   return enrollment.populate(COURSE_SUMMARY);
 }
+
+// Leaving deletes the enrollment and gives the seat back to the course's count.
+export async function leaveCourse(student: UserDocument, enrollmentId: string) {
+  const enrollment = await Enrollment.findOneAndDelete({ _id: enrollmentId, student: student._id });
+  if (!enrollment) throw new ApiError(404, 'Enrollment not found');
+  await Course.updateOne(
+    { _id: enrollment.course, enrollmentCount: { $gt: 0 } },
+    { $inc: { enrollmentCount: -1 } },
+  );
+  return { id: enrollment._id };
+}

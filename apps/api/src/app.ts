@@ -15,6 +15,14 @@ const SWAGGER_OPTIONS: swaggerUi.SwaggerUiOptions = {
   swaggerOptions: { persistAuthorization: true, withCredentials: true },
 };
 
+// How many proxies sit in front of the API. 1 = Nginx only (direct API access).
+// Behind Vercel's rewrite + Nginx, use 2 so req.ip is the visitor, not Vercel. Check with
+// GET /api/health, which echoes the IP the API sees.
+function trustProxy(): number | string {
+  const value = process.env.TRUST_PROXY ?? '1';
+  return /^\d+$/.test(value) ? Number(value) : value;
+}
+
 function allowedOrigins(): string[] {
   return (process.env.CLIENT_ORIGIN || '')
     .split(',')
@@ -25,8 +33,9 @@ function allowedOrigins(): string[] {
 export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}): Express {
   const app = express();
 
-  // Nginx sits in front on EC2; trust it so req.ip and secure cookies are correct.
-  app.set('trust proxy', 1);
+  // Proxies in front (Nginx, and Vercel in production) must be trusted so req.ip, used by
+  // the rate limiters and the audit log, is the real visitor.
+  app.set('trust proxy', trustProxy());
 
   // Docs go before helmet: swagger-ui needs inline assets that helmet's CSP would block.
   app.get('/api/docs.json', (req, res) => {
@@ -39,7 +48,8 @@ export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}):
   // so CORS only matters for direct calls from the listed origins.
   const origins = allowedOrigins();
   app.use(cors({ origin: origins.length ? origins : false, credentials: true }));
-  app.use(express.json({ limit: '100kb' }));
+  // Large enough for the biggest course the schema allows (50 lessons x 10,000 characters).
+  app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   if (process.env.NODE_ENV !== 'test') {
     app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -47,7 +57,10 @@ export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}):
 
   app.get('/api/health', (req, res) => {
     const db = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    res.json({ success: true, data: { status: 'ok', db, uptime: Math.round(process.uptime()) } });
+    res.json({
+      success: true,
+      data: { status: 'ok', db, uptime: Math.round(process.uptime()), clientIp: req.ip },
+    });
   });
 
   app.use('/api', apiRoutes(createLimiters(rateLimits)));

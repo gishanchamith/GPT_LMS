@@ -58,7 +58,9 @@ describe('POST /api/auth/login', () => {
       .post('/api/auth/login')
       .send({ username: user.username, password: PASSWORD });
     expect(res.status).toBe(200);
-    expect(res.body.data.token).toBeTypeOf('string');
+    // The token lives only in the httpOnly cookie, never in a body page scripts can read.
+    expect(res.body.data.token).toBeUndefined();
+    expect(res.headers['set-cookie'][0]).toMatch(/token=.+HttpOnly/i);
   });
 
   it('returns 401 for a wrong password and for an unknown user, with the same message', async () => {
@@ -131,5 +133,65 @@ describe('super admin bootstrap', () => {
   it('is backed by a unique index, so a second super admin cannot exist', async () => {
     await ensureSuperAdmin(env);
     await expect(createUser({ role: ROLES.SUPERADMIN })).rejects.toMatchObject({ code: 11000 });
+  });
+});
+
+describe('session cookie lifetime', () => {
+  it('matches JWT_EXPIRES_IN instead of a fixed day', async () => {
+    const user = await createUser();
+    process.env.JWT_EXPIRES_IN = '2h';
+    try {
+      const res = await api()
+        .post('/api/auth/login')
+        .send({ username: user.username, password: PASSWORD });
+      const maxAge = Number(/Max-Age=(\d+)/i.exec(res.headers['set-cookie'][0])?.[1]);
+      expect(maxAge).toBeGreaterThan(7100);
+      expect(maxAge).toBeLessThanOrEqual(7200);
+    } finally {
+      delete process.env.JWT_EXPIRES_IN;
+    }
+  });
+});
+
+describe('PUT /api/auth/me/password', () => {
+  const change = (headers: Record<string, string>, body: object) =>
+    api().put('/api/auth/me/password').set(headers).send(body);
+
+  it('rejects a wrong current password and reusing the same one', async () => {
+    const user = await createUser();
+    const wrong = await change(bearer(user), {
+      currentPassword: 'nope',
+      newPassword: 'brand-new-pass',
+    });
+    const same = await change(bearer(user), { currentPassword: PASSWORD, newPassword: PASSWORD });
+    expect(wrong.status).toBe(400);
+    expect(wrong.body.errors.currentPassword).toBeDefined();
+    expect(same.status).toBe(400);
+    expect(same.body.errors.newPassword).toBeDefined();
+  });
+
+  it('changes the password, ends other sessions and keeps this one signed in', async () => {
+    const user = await createUser();
+    const otherDevice = bearer(user);
+    const res = await change(bearer(user), {
+      currentPassword: PASSWORD,
+      newPassword: 'brand-new-pass',
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers['set-cookie'][0]).toMatch(/token=.+/);
+
+    expect((await api().get('/api/auth/me').set(otherDevice)).status).toBe(401);
+    expect((await api().get('/api/auth/me').set('Cookie', res.headers['set-cookie'])).status).toBe(
+      200,
+    );
+
+    const oldLogin = await api()
+      .post('/api/auth/login')
+      .send({ username: user.username, password: PASSWORD });
+    const newLogin = await api()
+      .post('/api/auth/login')
+      .send({ username: user.username, password: 'brand-new-pass' });
+    expect(oldLogin.status).toBe(401);
+    expect(newLogin.status).toBe(200);
   });
 });

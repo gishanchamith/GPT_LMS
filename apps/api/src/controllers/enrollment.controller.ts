@@ -17,3 +17,8 @@ export async function complete(req: Request, res: Response) {
   const { id } = validated(req, 'params', idParamSchema);
   ok(res, await enrollmentService.completeEnrollment(currentUser(req), id));
 }
+
+export async function leave(req: Request, res: Response) {
+  const { id } = validated(req, 'params', idParamSchema);
+  ok(res, await enrollmentService.leaveCourse(currentUser(req), id));
+}

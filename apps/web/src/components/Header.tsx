@@ -63,10 +63,14 @@ export default function Header() {
 
   const account = loading ? null : user ? (
     <div className="flex items-center gap-3">
-      <div className="text-right leading-tight">
+      <Link
+        href="/account"
+        className="rounded-lg px-2 py-1 text-right leading-tight hover:bg-slate-100"
+        title="Account settings"
+      >
         <p className="text-sm font-medium text-slate-900">{user.name}</p>
         <StatusBadge status={user.role} />
-      </div>
+      </Link>
       <Button variant="secondary" size="sm" onClick={logout}>
         Log out
       </Button>

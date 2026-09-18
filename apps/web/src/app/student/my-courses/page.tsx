@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useConfirm } from '@/context/ConfirmContext';
 import { useToast } from '@/context/ToastContext';
 import { useApiData } from '@/hooks/useApiData';
 import { api, errorMessage } from '@/lib/api';
@@ -13,12 +14,35 @@ import { Button, LinkButton, PageHeader, StatusBadge } from '@/components/ui';
 function EnrollmentFooter({
   enrollment,
   onCompleted,
+  onLeft,
 }: {
   enrollment: Enrollment;
   onCompleted: (updated: Enrollment) => void;
+  onLeft: (id: string) => void;
 }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [saving, setSaving] = useState(false);
+
+  const leave = async () => {
+    const ok = await confirm({
+      title: `Leave “${enrollment.course.title}”?`,
+      message:
+        'It will be removed from My courses. You can enroll again later if it is still open.',
+      confirmLabel: 'Leave course',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setSaving(true);
+    try {
+      await api(`/enrollments/${enrollment._id}`, { method: 'DELETE' });
+      toast.success(`You left “${enrollment.course.title}”.`);
+      onLeft(enrollment._id);
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSaving(false);
+    }
+  };
 
   const complete = async () => {
     setSaving(true);
@@ -41,11 +65,16 @@ function EnrollmentFooter({
         <StatusBadge status={enrollment.status} />
         <span className="ml-2">Enrolled {formatDate(enrollment.enrolledAt)}</span>
       </div>
-      {enrollment.status === 'active' && (
-        <Button size="sm" variant="secondary" onClick={complete} loading={saving}>
-          Mark complete
+      <div className="flex gap-1">
+        {enrollment.status === 'active' && (
+          <Button size="sm" variant="secondary" onClick={complete} loading={saving}>
+            Mark complete
+          </Button>
+        )}
+        <Button size="sm" variant="dangerGhost" onClick={leave} disabled={saving}>
+          Leave
         </Button>
-      )}
+      </div>
     </div>
   );
 }
@@ -93,7 +122,13 @@ export default function MyCoursesPage() {
               <CourseCard
                 key={e._id}
                 course={e.course}
-                footer={<EnrollmentFooter enrollment={e} onCompleted={replace} />}
+                footer={
+                  <EnrollmentFooter
+                    enrollment={e}
+                    onCompleted={replace}
+                    onLeft={(id) => state.setData((list) => list.filter((x) => x._id !== id))}
+                  />
+                }
               />
             ))}
           </div>

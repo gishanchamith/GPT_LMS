@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ROLES, USER_STATUS } from '@lp/shared';
+import User from '../src/models/User.js';
 import Course from '../src/models/Course.js';
 import Enrollment from '../src/models/Enrollment.js';
 import { api, bearer, createCourse, createUser } from './helpers.js';
@@ -180,5 +181,52 @@ describe('GET /api/courses/:id/students', () => {
     const course = await createCourse(instructorA);
     const res = await api().get(`/api/courses/${course._id}/students`).set(bearer(admin));
     expect(res.status).toBe(200);
+  });
+});
+
+describe('search, access and limits', () => {
+  it('matches partial words, case-insensitively', async () => {
+    await createCourse(instructorA, {
+      title: 'Software Testing',
+      category: 'Software Engineering',
+    });
+    await createCourse(instructorA, { title: 'Figma Basics', category: 'Design' });
+    const res = await api().get('/api/courses?search=SOFT');
+    expect(res.body.data.map((c: { title: string }) => c.title)).toEqual(['Software Testing']);
+  });
+
+  it('keeps an archived course open to students already enrolled, and only to them', async () => {
+    const course = await createCourse(instructorA, { status: 'archived' });
+    const outsider = await createUser({ role: ROLES.STUDENT });
+    await Enrollment.create({ student: student._id, course: course._id });
+
+    const enrolled = await api().get(`/api/courses/${course._id}`).set(bearer(student));
+    const other = await api().get(`/api/courses/${course._id}`).set(bearer(outsider));
+    const guest = await api().get(`/api/courses/${course._id}`);
+    expect(enrolled.status).toBe(200);
+    expect(enrolled.body.data.isEnrolled).toBe(true);
+    expect(other.status).toBe(404);
+    expect(guest.status).toBe(404);
+  });
+
+  it('refuses a suspended account on public routes instead of treating it as a guest', async () => {
+    const course = await createCourse(instructorA);
+    const headers = bearer(student);
+    await User.updateOne({ _id: student._id }, { status: USER_STATUS.SUSPENDED });
+    const res = await api().get(`/api/courses/${course._id}`).set(headers);
+    expect(res.status).toBe(403);
+  });
+
+  it('accepts the largest course the schema allows', async () => {
+    const content = Array.from({ length: 50 }, (_, i) => ({
+      title: `Lesson ${i + 1}`,
+      body: 'x'.repeat(10000),
+    }));
+    const res = await api()
+      .post('/api/courses')
+      .set(bearer(instructorA))
+      .send({ ...validCourse, content });
+    expect(res.status).toBe(201);
+    expect(res.body.data.content).toHaveLength(50);
   });
 });
