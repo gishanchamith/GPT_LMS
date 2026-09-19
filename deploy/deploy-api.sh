@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run on the EC2 host from the repository root: ./deploy/deploy-api.sh
+# Run on the EC2 host from the repository root: bash deploy/deploy-api.sh
 set -euo pipefail
 
 git pull --ff-only

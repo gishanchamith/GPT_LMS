@@ -15,7 +15,7 @@ const SWAGGER_OPTIONS: swaggerUi.SwaggerUiOptions = {
   swaggerOptions: { persistAuthorization: true, withCredentials: true },
 };
 
-// How many proxies sit in front of the API. 1 = Nginx only (direct API access).
+// How many proxies sit in front of the API. 1 = Nginx only (single-server setup).
 // Behind Vercel's rewrite + Nginx, use 2 so req.ip is the visitor, not Vercel. Check with
 // GET /api/health, which echoes the IP the API sees.
 function trustProxy(): number | string {
@@ -33,7 +33,7 @@ function allowedOrigins(): string[] {
 export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}): Express {
   const app = express();
 
-  // Proxies in front (Nginx, and Vercel in production) must be trusted so req.ip, used by
+  // Proxies in front (Nginx, plus Vercel in the split setup) must be trusted so req.ip, used by
   // the rate limiters and the audit log, is the real visitor.
   app.set('trust proxy', trustProxy());
 
@@ -44,7 +44,7 @@ export function createApp({ rateLimits = true }: { rateLimits?: boolean } = {}):
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, SWAGGER_OPTIONS));
 
   app.use(helmet());
-  // The browser normally reaches the API through the Vercel rewrite (same origin),
+  // The browser normally reaches the API on the site's own origin (Nginx or the Vercel rewrite),
   // so CORS only matters for direct calls from the listed origins.
   const origins = allowedOrigins();
   app.use(cors({ origin: origins.length ? origins : false, credentials: true }));
