@@ -5,12 +5,12 @@ recommendations that only point to real, enrollable courses**. Instructors publi
 who enrolled. Admins moderate the platform and manage course categories, and a single super admin
 manages the admins.
 
-|                        |                                                     |
-| ---------------------- | --------------------------------------------------- |
-| **Frontend**           | https://YOUR-APP.vercel.app <!-- TODO: live URL --> |
-| **API**                | https://api.YOUR-DOMAIN <!-- TODO: live URL -->     |
-| **API docs (Swagger)** | https://YOUR-APP.vercel.app/api/docs/               |
-| **Demo video**         | <!-- TODO: link -->                                 |
+|                         |                                    |
+| ----------------------- | ---------------------------------- |
+| **Live site**           | https://learnhub.mrt.lk            |
+| **AI advisor (guests)** | https://learnhub.mrt.lk/advisor    |
+| **API docs (Swagger)**  | https://learnhub.mrt.lk/api/docs/  |
+| **API health**          | https://learnhub.mrt.lk/api/health |            |
 
 ## Demo accounts
 
@@ -65,42 +65,43 @@ the audit log of every privileged action.
 
 ## Tech stack, and why
 
-| Layer      | Choice                                                                     | Why                                                                                                  |
-| ---------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Language   | **TypeScript** (strict) in the API, web app and shared package             | Domain and request types come from one set of zod schemas; `npm run typecheck` runs `tsc` everywhere |
-| Frontend   | **Next.js 16** (App Router), React 19, Tailwind CSS 4                      | File-based routing, `proxy.ts` for pre-render role redirects, rewrites make the API same-origin      |
-| Backend    | **Express 5** on Node 22                                                   | Minimal and explicit; Express 5 forwards async errors to the error handler natively                  |
-| Database   | **MongoDB Atlas** + Mongoose 9                                             | Flexible course content; unique indexes enforce invariants; transactions for cascade deletes         |
-| Auth       | JWT in an **httpOnly cookie**, bcrypt (cost 12)                            | Scripts can't read the token; `tokenVersion` makes suspension and role changes instant               |
-| Validation | **zod 4** in a shared package                                              | The same schema validates the React form and the API request                                         |
-| AI         | **OpenAI** chat completions (JSON mode)                                    | Grounded on the real catalog; every returned id is re-validated server-side                          |
-| Quality    | Vitest, Supertest, mongodb-memory-server, ESLint, Prettier, GitHub Actions | 105 API tests against a real (in-memory) MongoDB replica set, 10 web tests, CI on every push         |
-| Docs       | OpenAPI 3 + swagger-ui                                                     | Live, try-it-out documentation at `/api/docs`                                                        |
-| Hosting    | Vercel (web) · EC2 + Nginx + PM2 + certbot (API) · Atlas                   | HTTPS end to end; Atlas allow-lists only the EC2 IP                                                  |
+| Layer      | Choice                                                                             | Why                                                                                                  |
+| ---------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Language   | **TypeScript** (strict) in the API, web app and shared package                     | Domain and request types come from one set of zod schemas; `npm run typecheck` runs `tsc` everywhere |
+| Frontend   | **Next.js 16** (App Router), React 19, Tailwind CSS 4                              | File-based routing, `proxy.ts` for pre-render role redirects, rewrites make the API same-origin      |
+| Backend    | **Express 5** on Node 22                                                           | Minimal and explicit; Express 5 forwards async errors to the error handler natively                  |
+| Database   | **MongoDB Atlas** + Mongoose 9                                                     | Flexible course content; unique indexes enforce invariants; transactions for cascade deletes         |
+| Auth       | JWT in an **httpOnly cookie**, bcrypt (cost 12)                                    | Scripts can't read the token; `tokenVersion` makes suspension and role changes instant               |
+| Validation | **zod 4** in a shared package                                                      | The same schema validates the React form and the API request                                         |
+| AI         | **OpenAI** chat completions (JSON mode)                                            | Grounded on the real catalog; every returned id is re-validated server-side                          |
+| Quality    | Vitest, Supertest, mongodb-memory-server, ESLint, Prettier, GitHub Actions         | 105 API tests against a real (in-memory) MongoDB replica set, 10 web tests, CI on every push         |
+| Docs       | OpenAPI 3 + swagger-ui                                                             | Live, try-it-out documentation at `/api/docs`                                                        |
+| Hosting    | AWS EC2 t3.micro (free tier): Nginx + PM2 + Let's Encrypt · Cloudflare DNS · Atlas | One origin for pages and API, HTTPS end to end, runs on the free tier                                |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    B[Browser] -- "pages + /api/*" --> V["Vercel · Next.js"]
-    V -- "rewrite /api/*" --> N["Nginx (TLS) · EC2"]
-    N --> E["Express API · PM2"]
+    B[Browser] -- "HTTPS" --> N["Nginx (TLS) · EC2"]
+    N -- "/api/*" --> E["Express API · PM2"]
+    N -- "pages" --> W["Next.js · PM2"]
     E --> M[("MongoDB Atlas")]
     E --> O[OpenAI]
-    S["@lp/shared: roles, permissions, zod schemas"] -.-> V
+    S["@lp/shared: roles, permissions, zod schemas"] -.-> W
     S -.-> E
 ```
 
-The browser only talks to the Vercel origin. `/api/*` is rewritten to the API, so the auth cookie
-is first-party and `sameSite: 'lax'` works without CORS. Request lifecycles and the full folder
-structure are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Pages and `/api/*` are served from one hostname, so the auth cookie is first-party and
+`sameSite: 'lax'` works without CORS. The web app can also run on Vercel, with `/api/*` rewritten
+to the EC2 API. Request lifecycles and the full folder structure are in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```
 apps/api         Express API: routes → middleware → controllers → services → models
 apps/web         Next.js app: proxy.ts guards, contexts, pages per role
 packages/shared  roles, permission map, constants, zod schemas + inferred types
 docs/            architecture, data model, decisions, deployment, openapi.json
-deploy/          Nginx config, API deploy script
+deploy/          Nginx configs, deploy scripts (PM2 configs live in each app)
 .github/         CI workflow
 ```
 
@@ -199,7 +200,6 @@ npm run seed -- --small                     # demo data (add --yes for a remote 
 npm run dev                                 # API on :5000, web on :3000
 ```
 
-Open http://localhost:3000 and sign in with a demo account.
 
 **OpenAI key:** paste it into `apps/api/.env` on **one line** (`OPENAI_API_KEY=sk-proj-…`, about
 160 characters; turn off word wrap if your editor splits it), restart the API, then run
@@ -224,26 +224,35 @@ calls OpenAI except clicking **Get recommendations**: tests, CI, builds and page
 
 **API (`apps/api/.env`)**
 
-| Variable                                       | Purpose                                                                          |
-| ---------------------------------------------- | -------------------------------------------------------------------------------- |
-| `MONGODB_URI`                                  | Connection string **including the database name**, e.g. `…mongodb.net/GPT_LMS?…` |
-| `JWT_SECRET`, `JWT_EXPIRES_IN`                 | Token signing secret (≥32 characters in production) and lifetime (default `1d`)  |
-| `PORT`, `NODE_ENV`, `CLIENT_ORIGIN`            | Port (5000), environment, origins allowed to call the API directly               |
-| `OPENAI_API_KEY`, `OPENAI_MODEL`               | OpenAI key (one line) and model (default `gpt-5.4-mini`)                         |
-| `OPENAI_TIMEOUT_MS`, `OPENAI_REASONING_EFFORT` | Request timeout (20000) and optional effort for reasoning models                 |
-| `AI_RATE_LIMIT`, `AI_GUEST_RATE_LIMIT`         | Advisor requests per 15 minutes per student (10) and per guest IP (5)            |
-| `TRUST_PROXY`                                  | Proxies in front of the API: `1` locally/Nginx only, `2` behind Vercel + Nginx   |
-| `SUPERADMIN_NAME/USERNAME/EMAIL/PASSWORD`      | Used by `create-superadmin` and `seed` (password ≥8 characters)                  |
-| `SEED_PASSWORD`                                | Password for every seeded demo account (default `Password123!`)                  |
+| Variable                                       | Purpose                                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `MONGODB_URI`                                  | Connection string **including the database name**, e.g. `…mongodb.net/GPT_LMS?…`    |
+| `JWT_SECRET`, `JWT_EXPIRES_IN`                 | Token signing secret (≥32 characters in production) and lifetime (default `1d`)     |
+| `PORT`, `NODE_ENV`, `CLIENT_ORIGIN`            | Port (5000), environment, origins allowed to call the API directly                  |
+| `OPENAI_API_KEY`, `OPENAI_MODEL`               | OpenAI key (one line) and model (default `gpt-5.4-mini`)                            |
+| `OPENAI_TIMEOUT_MS`, `OPENAI_REASONING_EFFORT` | Request timeout (20000) and optional effort for reasoning models                    |
+| `AI_RATE_LIMIT`, `AI_GUEST_RATE_LIMIT`         | Advisor requests per 15 minutes per student (10) and per guest IP (5)               |
+| `TRUST_PROXY`                                  | Proxies in front of the API: `1` locally or behind Nginx, `2` behind Vercel + Nginx |
+| `SUPERADMIN_NAME/USERNAME/EMAIL/PASSWORD`      | Used by `create-superadmin` and `seed` (password ≥8 characters)                     |
+| `SEED_PASSWORD`                                | Password for every seeded demo account (default `Password123!`)                     |
 
-**Web (`apps/web/.env.local` / Vercel)**: `API_URL` (where `/api/*` is proxied) and
-`NEXT_PUBLIC_DEMO_MODE` (`false` hides the demo-account buttons).
+**Web (`apps/web/.env.local` locally, `.env.production` on the server)**: `API_URL` (where
+`/api/*` is proxied; read at build time) and `NEXT_PUBLIC_DEMO_MODE` (`false` hides the
+demo-account buttons).
 
 ## Deployment
 
-Vercel (root directory `apps/web`, env `API_URL`) → EC2 running Nginx (TLS by certbot) in front of
-PM2 → Express → MongoDB Atlas (network access limited to the EC2 Elastic IP). Step-by-step
-instructions, the Nginx config and the deploy script: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+The live site runs on a single AWS free-tier EC2 instance (t3.micro, Ubuntu, with an Elastic IP).
+Nginx terminates HTTPS with a Let's Encrypt certificate, then sends `/api/*` to the Express API and
+everything else to Next.js, both kept running by PM2. DNS is a Cloudflare A record for
+`learnhub.mrt.lk`, and the data lives in MongoDB Atlas.
+
+```bash
+bash deploy/deploy.sh # on the server: pull, install, type-check, build both apps, reload PM2, health checks
+```
+
+Step-by-step setup (AWS, server, `.env`, domain and HTTPS, Cloudflare proxy, verification) and the
+alternative Vercel + EC2 split: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Design decisions
 

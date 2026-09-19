@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
-// Where the Express API lives. On Vercel this is the EC2 HTTPS URL; locally the dev server.
+// Where the Express API lives: the local dev server, 127.0.0.1:5000 when both apps share a
+// server, or the API's HTTPS URL when the web app runs on Vercel.
 const API_URL = (process.env.API_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 const nextConfig: NextConfig = {

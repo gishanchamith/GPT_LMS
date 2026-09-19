@@ -3,8 +3,8 @@
 ## Authentication
 
 **JWT in an httpOnly cookie.** JavaScript cannot read the token, so an XSS bug cannot steal it.
-`secure` in production, `sameSite: 'lax'` (possible because the Vercel rewrite makes the API
-same-origin). The token is never put in a response body, so page scripts can't read it at all;
+`secure` in production, `sameSite: 'lax'` (possible because pages and `/api/*` share one origin:
+Nginx routes both on the same hostname). The token is never put in a response body, so page scripts can't read it at all;
 Swagger, Postman and browsers keep the cookie automatically, and scripts can still send
 `Authorization: Bearer`. The cookie's lifetime is taken from the token's own expiry, so the two
 always match whatever `JWT_EXPIRES_IN` is set to.
@@ -76,12 +76,13 @@ substitution.
 
 ## Operational safety
 
-- **Client IPs behind two proxies.** In production a request passes through Vercel's rewrite and
-  then Nginx. `TRUST_PROXY=2` makes Express take the visitor's IP from `X-Forwarded-For`, so rate
-  limits and the audit log are per visitor, not per Vercel server. `GET /api/health` echoes the IP
-  the API sees, to check the setting after deploying. Trade-off: someone calling the API domain
-  directly could forge that header to dodge the IP-based limits; restricting Nginx to Vercel's
-  traffic would close that.
+- **Client IPs behind proxies.** Rate limits and the audit log use `req.ip`, so Express must
+  trust exactly as many proxies as sit in front of it. `TRUST_PROXY` sets that count. The live
+  setup uses `1` (Nginx only), and the Vercel split setup uses `2`. Too low, and every visitor
+  shares one rate-limit bucket. Too high, and clients can forge their IP with `X-Forwarded-For`.
+  `GET /api/health` echoes the IP the API sees, so the setting can be checked after each deploy.
+  With Cloudflare's orange-cloud proxy, Nginx should take the visitor IP from `CF-Connecting-IP`,
+  accepted only from Cloudflare's own IP ranges. That adds no extra hop for Express to trust.
 - **The seed script refuses to wipe a remote database** (anything that isn't `localhost`) unless
   `--yes` is passed, because a `.env` pointing at Atlas during development is an easy mistake.
 - **Changing an instructor's role is refused while they still own courses**, since nobody else
@@ -130,5 +131,6 @@ both test suites and both builds on every push and pull request.
   the collection, which is fine for a catalog of hundreds of courses; Atlas Search would add
   relevance ranking and typo tolerance at scale.
 - **Uploads, payments and progress tracking per lesson** are out of scope.
-- **Deployment** is manual (`deploy/deploy-api.sh` and Vercel). CI checks every push but doesn't
-  deploy.
+- **Deployment** is one manual command on the server (`deploy/deploy.sh`). CI checks every push
+  but doesn't deploy. The single t3.micro instance is a single point of failure, and building
+  Next.js on it takes a few minutes. Building in CI and shipping the output would speed deploys up.

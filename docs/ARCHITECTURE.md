@@ -4,20 +4,24 @@
 
 ```mermaid
 flowchart LR
-    B[Browser] -- "HTTPS · pages + /api/*" --> V["Vercel<br/>Next.js 16 (apps/web)"]
-    V -- "rewrite /api/* → HTTPS" --> N["Nginx on EC2<br/>TLS via certbot"]
-    N -- "127.0.0.1:5000" --> E["Express 5 API<br/>PM2 (apps/api)"]
-    E -- "Mongoose" --> M[("MongoDB Atlas<br/>IP allow-list: EC2 Elastic IP")]
+    B[Browser] -- "HTTPS<br/>learnhub.mrt.lk" --> N["Nginx on EC2 t3.micro<br/>TLS via Let's Encrypt"]
+    N -- "/api/* → 127.0.0.1:5000" --> E["Express 5 API<br/>PM2 (apps/api)"]
+    N -- "everything else → 127.0.0.1:3000" --> W["Next.js 16<br/>PM2 (apps/web)"]
+    E -- "Mongoose" --> M[("MongoDB Atlas")]
     E -- "chat completions<br/>(server-side key)" --> O[OpenAI]
-    S["@lp/shared<br/>roles · permissions · zod schemas"] -. imported by .-> V
+    S["@lp/shared<br/>roles · permissions · zod schemas"] -. imported by .-> W
     S -. imported by .-> E
 ```
 
-**Why the browser only ever talks to Vercel.** `next.config.ts` rewrites `/api/*` to the EC2 API,
-so from the browser's point of view the API is same-origin. The auth cookie is therefore
-first-party, `sameSite: 'lax'` works, there is no CORS preflight on every request, and the EC2
-hostname never appears in client code. Because each request passes two proxies (Vercel, then
-Nginx), the API runs with `TRUST_PROXY=2` in production so `req.ip` is the visitor.
+**One origin for pages and API.** The browser loads pages and calls `/api/*` on the same
+hostname, and Nginx splits the traffic on one EC2 instance (DNS is on Cloudflare, and the
+certificate comes from Let's Encrypt). The auth cookie is therefore first-party, `sameSite: 'lax'`
+works, and there is no CORS preflight on every request. Nginx is the only proxy in front of the
+API, so it runs with `TRUST_PROXY=1` and `req.ip` is the visitor.
+
+The same code also supports a split setup ([DEPLOYMENT.md §6](DEPLOYMENT.md)): Next.js on Vercel
+with `next.config.ts` rewriting `/api/*` to the EC2 API. The browser still sees a single origin
+there, and the API uses `TRUST_PROXY=2` because each request passes through two proxies.
 
 ## Request lifecycle (protected write)
 
