@@ -7,3 +7,6 @@ dist/
 .vercel/
 .DS_Store
 *.pem
+apps/api/.localdb/
+next-env.d.ts
+*.tsbuildinfo
