@@ -10,6 +10,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 export const metadata: Metadata = {
   title: { default: 'LearnHub', template: '%s · LearnHub' },
   description: 'Online courses with AI-powered recommendations.',
+  icons: { icon: '/favicon.png', apple: '/favicon.png' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
